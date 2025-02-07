@@ -1,5 +1,6 @@
 import json
 import argparse
+import re
 from rich.console import Console
 from rich.syntax import Syntax
 from rich.panel import Panel
@@ -24,22 +25,18 @@ def visualize_json(file_path, entry_id):
     responses = task_info.get("responses", {})
     for temperature, response in responses.items():
         content = response.get("content", "")
-        code_start = content.find("```python\n")
-        code_end = content.find("```", code_start + 9)
         
-        if code_start != -1 and code_end != -1:
-            before_code = content[:code_start].strip()
-            code_block = content[code_start+10:code_end].strip()
-            after_code = content[code_end+3:].strip()
-            
-            console.print(Panel(f"[bold]Temperature:[/] {temperature}", expand=False))
-            console.print(before_code)
-            syntax = Syntax(code_block, "python", theme="monokai", line_numbers=True)
-            console.print(syntax)
-            console.print(after_code)
-        else:
-            console.print(Panel(f"[bold]Temperature:[/] {temperature}\n{content}", expand=False))
-
+        console.print(Panel(f"[bold]Temperature:[/] {temperature}", expand=False))
+        
+        # Split content by code blocks and retain order
+        parts = re.split(r'(```python\n.*?```)', content, flags=re.DOTALL)
+        for part in parts:
+            if part.startswith("```python\n") and part.endswith("```"):
+                code_block = part[10:-3].strip()
+                syntax = Syntax(code_block, "python", theme="monokai", line_numbers=True)
+                console.print(syntax)
+            else:
+                console.print(part.strip())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Visualize a specific entry in a JSON file.")
@@ -48,4 +45,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     visualize_json(args.file_path, args.entry_id)
+
 

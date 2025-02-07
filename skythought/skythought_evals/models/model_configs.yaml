@@ -94,4 +94,4 @@ models:
   
   deepseek-ai/DeepSeek-R1-Distill-Qwen-32B:
     system_prompt: *r1_series_cot_system_prompt
-    user_template: "Question: {}\nPlease write the answer for this coding task directly. DO NOT USE A <think> BLOCK, JUST START WITH A CODE BLOCK.\nAnswer:\n```python\n"
+    user_template: "Question: {}\nPlease write the answer for this coding task directly with explanatory comments at each line. DO NOT USE A <think> BLOCK, JUST START WITH A CODE BLOCK.\n\nAnswer:\n```python\n"
