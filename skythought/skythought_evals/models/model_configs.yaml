@@ -94,4 +94,4 @@ models:
   
   deepseek-ai/DeepSeek-R1-Distill-Qwen-32B:
     system_prompt: *r1_series_cot_system_prompt
-    user_template: "Question: {}\nPlease write the answer for this coding task directly with explanatory comments at each line. DO NOT USE A <think> BLOCK, JUST START WITH A CODE BLOCK.\n\nAnswer:\n```python\n"
+    user_template: "Question: {}\n\nPlease write the answer for this coding task inside a python code block. Let's reason step by step, think before each line of code and write down the thought process in the code comments.\n\nAnswer:\n<think>\nOkay, I will reason step by step when writing the code.\n</think>\n\n```python\n"
