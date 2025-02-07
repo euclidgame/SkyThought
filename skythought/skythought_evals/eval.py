@@ -38,6 +38,18 @@ def parse_arguments():
         default=[0],
         help="Temperature for sampling.",
     )
+    parser.add_argument(
+        "--start",
+        type=int,
+        default=0,
+        help="Start index for the dataset.",
+    )
+    parser.add_argument(
+        "--end",
+        type=int,
+        default=-1,
+        help="End index for the dataset.",
+    )
     return parser.parse_args()
 
 
@@ -100,6 +112,8 @@ def main():
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments
+        command.extend(["--start", str(args.start)])
+        command.extend(["--end", str(args.end)])
 
         if args.difficulty:
             command.append("--difficulty")

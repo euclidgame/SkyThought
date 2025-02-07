@@ -55,6 +55,7 @@ class LiveCodeBenchTaskHandler(TaskHandler):
     def update_results(self, problem, response):
         if not isinstance(response, str):
             response = response.outputs[0].text.strip()
+        response = "```python\n" + response
         # Initialize the response structure
         response_entry = {
             "content": response,
@@ -67,7 +68,7 @@ class LiveCodeBenchTaskHandler(TaskHandler):
             response_entry["correctness"] = False
             response_entry["reason"] = "Does not contain code component."
         else:
-            last_code = code_filter_result[-1]
+            last_code = code_filter_result[0]
             problem_to_check = copy.deepcopy(problem)
 
             curr_res = self.check_correctness(
@@ -96,7 +97,7 @@ class LiveCodeBenchTaskHandler(TaskHandler):
             prompt_text = self.generate_prompt(problem)
             conversations.append(
                 self.make_conversation_from_contents(
-                    [prompt_text],
+                    [prompt_text, "Here is the answer to the coding task:\n```python\n"],
                     system_prompt=system_prompt,
                     user_template=user_template,
                 )

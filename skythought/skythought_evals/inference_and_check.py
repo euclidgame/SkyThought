@@ -107,8 +107,9 @@ def inference(llm, conversations, max_tokens, temp, args):
         responses = [Response.from_openai_response(response) for response in responses]
     else:
         sampling_params = SamplingParams(max_tokens=max_tokens, temperature=temp)
-        responses = llm.chat(
-            messages=conversations, sampling_params=sampling_params, use_tqdm=True
+        prompts = [conv[1]["content"] for conv in conversations]
+        responses = llm.generate(
+            prompts=prompts, sampling_params=sampling_params, use_tqdm=True
         )
         responses = [Response.from_vllm_response(response) for response in responses]
 
