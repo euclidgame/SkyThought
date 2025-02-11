@@ -612,11 +612,11 @@ def update_dataset_in_place(
 def map_to_example(row):
     return {
         "prompt": row["question_content"],
-        "test": row["private_test_cases"],
+        # "test": row["private_test_cases"],
         "entry_point": row["starter_code"],
         "canonical_solution": "",  # seems like live code bench lite does not have this field
         "task_id": row["question_id"],
         "is_stdin": has_test_type(row["public_test_cases"], "stdin"),
-        "public_test_cases": row["public_test_cases"],
+        # "public_test_cases": row["public_test_cases"],
         "difficulty": row["difficulty"],
     }
