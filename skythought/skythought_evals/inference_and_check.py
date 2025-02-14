@@ -32,6 +32,9 @@ from skythought_evals.util.response import Response, SingleParsedResponse
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
 
+from skythought.skythought_evals.tasks.livecodebench.livecodebench_handler import LiveCodeBenchTaskHandler
+from skythought.skythought_evals.tasks.math.math_handler import MathTaskHandler
+
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
 
@@ -146,7 +149,10 @@ def inference(llm, conversations, max_tokens, temp, args):
             max_tokens=max_tokens, temperature=temp, n=args.n, top_p=args.top_p
         )
         responses = llm.chat(
-            messages=conversations, sampling_params=sampling_params, use_tqdm=True
+            messages=conversations,
+            sampling_params=sampling_params,
+            use_tqdm=True,
+            continue_final_message=True,
         )
         responses = [Response.from_vllm_response(response) for response in responses]
 
@@ -190,6 +196,42 @@ def perform_inference_and_check(
     temperature_to_scores = {}
     temperature_to_acc = {}
     responses = []
+    
+    if args.prompt_style == "no_thinking":
+        if isinstance(handler, MathTaskHandler):
+            model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
+        elif isinstance(handler, LiveCodeBenchTaskHandler):
+            model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
+    conversations = handler.make_conversations(
+        remaining_data, model_config.system_prompt, model_config.user_template
+    )
+    if args.prompt_style == "no_thinking":
+        if isinstance(handler, MathTaskHandler):
+            for i, conv in enumerate(conversations):
+                conv.append(
+                    {
+                        "role": "assistant",
+                        "content": "<think>Okay, I have finished thinking.\n</think>\n",
+                    }
+                )
+        elif isinstance(handler, LiveCodeBenchTaskHandler):
+            for i, conv in enumerate(conversations):
+                conv.append(
+                    {
+                        "role": "assistant",
+                        "content": "<think>Okay, I have finished thinking.\n</think>\n```python\n",
+                    }
+                )
+    elif args.prompt_style == "thinking":
+        for i, conv in enumerate(conversations):
+            conv.append(
+                {
+                    "role": "assistant",
+                    "content": "<think>",
+                }
+            )
+    else:
+        raise ValueError(f"Invalid prompt style: {args.prompt_style}")
     for temp in temperatures:
         if len(conversations) == 0:
             print("No more data to process")
@@ -640,6 +682,17 @@ def main():
         default=1,
         help="Sampling parameter `top_p`",
     )
+<<<<<<< HEAD
+=======
+    parser.add_argument(
+        "--prompt_style",
+        type=str,
+        default="normal",
+        choices=["normal", "no_thinking"],
+        help="Prompt style for the model.",
+    )
+
+>>>>>>> b7c5183 (Add thinking and no_thinking prompt)
     args = parser.parse_args()
     # load ray config
     if args.use_ray:

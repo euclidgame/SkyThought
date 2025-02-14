@@ -75,3 +75,6 @@ models:
         
   NovaSky-AI/Sky-T1-32B-Flash: 
     system_prompt: *sky_t1_system_prompt
+
+  deepseek-ai/DeepSeek-R1-Distill-Qwen-32B:
+    name: DeepSeek-R1-Distill-Qwen-32B
