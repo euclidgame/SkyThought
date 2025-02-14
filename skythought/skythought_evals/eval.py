@@ -40,10 +40,23 @@ def parse_arguments():
         "--result-dir", type=str, default=".", help="Directory to save result files."
     )
     parser.add_argument(
-        "--output-file",
+        "--start",
+        type=int,
+        default=0,
+        help="Start index for the dataset.",
+    )
+    parser.add_argument(
+        "--end",
+        type=int,
+        default=None,
+        help="End index for the dataset.",
+    )
+    parser.add_argument(
+        "--prompt_style",
         type=str,
-        default="",
-        help="[OBSOLETE] Output file to save results to.",
+        default="normal",
+        choices=["normal", "no_thinking"],
+        help="Prompt style for the model.",
     )
     return parser.parse_args()
 
@@ -102,6 +115,10 @@ def main():
             eval_name,
             "--tp",
             str(tp),
+            "--start",
+            str(args.start),
+            "--end",
+            str(args.end),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments
