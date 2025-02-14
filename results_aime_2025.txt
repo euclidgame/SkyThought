@@ -1,0 +1,8 @@
+
+Running eval: aime with command ['python', '/home/ubuntu/wenjie-token-eval/SkyThought/skythought/skythought_evals/inference_and_check.py', '--model', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', '--task', 'aime', '--tp', '2', '--start', '0', '--end', '-1', '--temperatures', '0.6', '--difficulty', '2025']
+INFO 02-14 03:45:12 __init__.py:183] Automatically detected platform cuda.
+Traceback (most recent call last):
+  File "/home/ubuntu/wenjie-token-eval/SkyThought/skythought/skythought_evals/inference_and_check.py", line 29, in <module>
+    from skythought.skythought_evals.tasks.livecodebench.livecodebench_handler import LiveCodeBenchTaskHandler
+ModuleNotFoundError: No module named 'skythought'
+Error occurred while running eval aime: Command '['python', '/home/ubuntu/wenjie-token-eval/SkyThought/skythought/skythought_evals/inference_and_check.py', '--model', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', '--task', 'aime', '--tp', '2', '--start', '0', '--end', '-1', '--temperatures', '0.6', '--difficulty', '2025']' returned non-zero exit status 1.

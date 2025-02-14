@@ -55,7 +55,7 @@ def parse_arguments():
         "--prompt_style",
         type=str,
         default="normal",
-        choices=["normal", "no_thinking"],
+        choices=["thinking", "no_thinking"],
         help="Prompt style for the model.",
     )
     return parser.parse_args()
@@ -119,6 +119,8 @@ def main():
             str(args.start),
             "--end",
             str(args.end),
+            "--prompt_style",
+            args.prompt_style,
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments

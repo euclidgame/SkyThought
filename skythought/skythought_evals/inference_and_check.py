@@ -32,8 +32,8 @@ from skythought_evals.util.response import Response, SingleParsedResponse
 from tqdm import tqdm
 from vllm import LLM, SamplingParams
 
-from skythought.skythought_evals.tasks.livecodebench.livecodebench_handler import LiveCodeBenchTaskHandler
-from skythought.skythought_evals.tasks.math.math_handler import MathTaskHandler
+from skythought_evals.tasks.livecodebench.livecodebench_handler import LiveCodeBenchTaskHandler
+from skythought_evals.tasks.math.math_handler import MathTaskHandler
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
@@ -202,6 +202,7 @@ def perform_inference_and_check(
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
         elif isinstance(handler, LiveCodeBenchTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
+
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
