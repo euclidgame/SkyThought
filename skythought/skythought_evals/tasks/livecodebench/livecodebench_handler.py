@@ -12,6 +12,8 @@ from .livecodebench_util import (
     unsafe_lcb_runTests,
 )
 
+import re
+
 
 class LiveCodeBenchTaskHandler(TaskHandler):
 
@@ -55,6 +57,8 @@ class LiveCodeBenchTaskHandler(TaskHandler):
     def update_results(self, problem, response):
         if not isinstance(response, str):
             response = response.outputs[0].text.strip()
+        if not re.search(r"```[\s\S]+?```", response):
+            response = "```python\n" + response
         # Initialize the response structure
         response_entry = {
             "content": response,
