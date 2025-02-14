@@ -145,14 +145,25 @@ def inference(llm, conversations, max_tokens, temp, args):
 
         responses = [Response.from_openai_response(response) for response in responses]
     else:
+<<<<<<< HEAD
         sampling_params = SamplingParams(
             max_tokens=max_tokens, temperature=temp, n=args.n, top_p=args.top_p
         )
+=======
+        sampling_params = SamplingParams(max_tokens=max_tokens, temperature=temp)
+        if args.chat_template:
+            with open(args.chat_template, "r") as f:
+                custom_chat_template = f.read()
+        else:
+            custom_chat_template = None
+>>>>>>> 3c38cbd (Add more options to eval)
         responses = llm.chat(
             messages=conversations,
             sampling_params=sampling_params,
             use_tqdm=True,
-            continue_final_message=True,
+            continue_final_message=args.continue_final_message,
+            add_generation_prompt=not args.continue_final_message,
+            chat_template=custom_chat_template,
         )
         responses = [Response.from_vllm_response(response) for response in responses]
 
@@ -212,7 +223,7 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>Okay, I have finished thinking.\n</think>\n",
+                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the problem.\n",
                     }
                 )
         elif isinstance(handler, LiveCodeBenchTaskHandler):
@@ -220,7 +231,7 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>Okay, I have finished thinking.\n</think>\n```python\n",
+                        "content": "<think>\nOkay, I have finished thinking.\n</think>\n```python\n",
                     }
                 )
     elif args.prompt_style == "thinking":
@@ -231,8 +242,6 @@ def perform_inference_and_check(
                     "content": "<think>",
                 }
             )
-    else:
-        raise ValueError(f"Invalid prompt style: {args.prompt_style}")
     for temp in temperatures:
         if len(conversations) == 0:
             print("No more data to process")
@@ -283,7 +292,10 @@ def perform_inference_and_check(
                         results[problem_key]["messages"] = ""
                     results[problem_key]["responses"] = {}
                     results[problem_key]["token_usages"] = {}
-                    prompt = conversations[idx][-1]["content"]
+                    for i, conv in enumerate(conversations[idx]):
+                        if conv["role"] == "user":
+                            prompt = conv["content"]
+                            break
                     results[problem_key]["prompt"] = prompt
                     results[problem_key]["input_conversation"] = conversations[idx]
                     temperature_to_scores[temp][problem_key] = [
@@ -686,9 +698,21 @@ def main():
     parser.add_argument(
         "--prompt_style",
         type=str,
-        default="normal",
-        choices=["normal", "no_thinking"],
+        default="thinking",
+        choices=["thinking", "no_thinking", "normal"],
         help="Prompt style for the model.",
+    )
+    parser.add_argument(
+        "--chat_template",
+        type=str,
+        default=None,
+        help="Jinja file for the chat template.",
+    )
+    parser.add_argument(
+        "--continue_final_message",
+        type=bool,
+        default=False,
+        help="Continue the final message from the model.",
     )
 
     args = parser.parse_args()
@@ -761,10 +785,14 @@ def main():
         result_file = os.path.join(
             args.result_dir,
 <<<<<<< HEAD
+<<<<<<< HEAD
             f"{file_suffix}.json",
 =======
             f"{model_config.name}_{args.task}_{args.prompt_style}_{args.split}_{args.subset}_{args.filter_difficulty}_{args.start}_{args.end}.json",
 >>>>>>> b4c5074 (Add prompt style to result file name)
+=======
+            f"{model_config.name}_{args.task}_{args.prompt_style}_{args.split}_{args.subset}_{args.difficulty}_{args.start}_{args.end}.json",
+>>>>>>> 3c38cbd (Add more options to eval)
         )
 
     if args.check:

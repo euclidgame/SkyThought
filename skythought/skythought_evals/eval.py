@@ -55,8 +55,20 @@ def parse_arguments():
         "--prompt_style",
         type=str,
         default="normal",
-        choices=["thinking", "no_thinking"],
+        choices=["thinking", "no_thinking", "normal"],
         help="Prompt style for the model.",
+    )
+    parser.add_argument(
+        "--chat_template",
+        type=str,
+        default=None,
+        help="Jinja file for the chat template.",
+    )
+    parser.add_argument(
+        "--continue_final_message",
+        type=bool,
+        required=True,
+        help="Continue the final message from the model.",
     )
     return parser.parse_args()
 
@@ -121,6 +133,8 @@ def main():
             str(args.end),
             "--prompt_style",
             args.prompt_style,
+            "--continue_final_message",
+            str(args.continue_final_message),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments
@@ -133,6 +147,9 @@ def main():
             ]
         )
 
+        if args.chat_template:
+            command.append("--chat_template")
+            command.append(args.chat_template)
         if args.difficulty:
             command.append("--difficulty")
             command.append(args.difficulty)
