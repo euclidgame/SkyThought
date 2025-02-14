@@ -1,5 +1,5 @@
 handler: aime
-dataset_path: AI-MO/aimo-validation-aime
+dataset_path: xiaomama2002/AIME-2022-2025
 dataset_split: train
 question_key: problem
 answer_key: answer

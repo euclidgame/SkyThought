@@ -48,7 +48,7 @@ def parse_arguments():
     parser.add_argument(
         "--end",
         type=int,
-        default=None,
+        default=-1,
         help="End index for the dataset.",
     )
     parser.add_argument(
