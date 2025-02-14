@@ -196,7 +196,7 @@ def perform_inference_and_check(
     temperature_to_scores = {}
     temperature_to_acc = {}
     responses = []
-    
+
     if args.prompt_style == "no_thinking":
         if isinstance(handler, MathTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
@@ -682,8 +682,6 @@ def main():
         default=1,
         help="Sampling parameter `top_p`",
     )
-<<<<<<< HEAD
-=======
     parser.add_argument(
         "--prompt_style",
         type=str,
@@ -692,7 +690,6 @@ def main():
         help="Prompt style for the model.",
     )
 
->>>>>>> b7c5183 (Add thinking and no_thinking prompt)
     args = parser.parse_args()
     # load ray config
     if args.use_ray:
@@ -762,7 +759,11 @@ def main():
     else:
         result_file = os.path.join(
             args.result_dir,
+<<<<<<< HEAD
             f"{file_suffix}.json",
+=======
+            f"{model_config.name}_{args.task}_{args.prompt_style}_{args.split}_{args.subset}_{args.filter_difficulty}_{args.start}_{args.end}.json",
+>>>>>>> b4c5074 (Add prompt style to result file name)
         )
 
     if args.check:
