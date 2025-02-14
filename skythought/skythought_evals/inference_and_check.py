@@ -11,6 +11,13 @@ from typing import Dict, Tuple
 
 import numpy as np
 import ray
+<<<<<<< HEAD
+=======
+from skythought_evals.tasks.gpqa_diamond.gpqa_diamond_handler import GPQADiamondTaskHandler
+from batch import Pipeline, init_engine_from_config
+from batch.env_config import EnvConfig
+from batch.workload import EvalWorkload, load_config_from_path
+>>>>>>> c2f5b5e (Add GPQA)
 from openai import OpenAI
 from skythought_evals.batch import Pipeline, init_engine_from_config
 from skythought_evals.batch.env_config import EnvConfig
@@ -145,18 +152,14 @@ def inference(llm, conversations, max_tokens, temp, args):
 
         responses = [Response.from_openai_response(response) for response in responses]
     else:
-<<<<<<< HEAD
         sampling_params = SamplingParams(
             max_tokens=max_tokens, temperature=temp, n=args.n, top_p=args.top_p
         )
-=======
-        sampling_params = SamplingParams(max_tokens=max_tokens, temperature=temp)
         if args.chat_template:
             with open(args.chat_template, "r") as f:
                 custom_chat_template = f.read()
         else:
             custom_chat_template = None
->>>>>>> 3c38cbd (Add more options to eval)
         responses = llm.chat(
             messages=conversations,
             sampling_params=sampling_params,
@@ -209,7 +212,7 @@ def perform_inference_and_check(
     responses = []
 
     if args.prompt_style == "no_thinking":
-        if isinstance(handler, MathTaskHandler):
+        if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
         elif isinstance(handler, LiveCodeBenchTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
@@ -218,7 +221,7 @@ def perform_inference_and_check(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
     if args.prompt_style == "no_thinking":
-        if isinstance(handler, MathTaskHandler):
+        if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
                     {
