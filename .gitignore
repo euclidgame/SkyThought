@@ -171,3 +171,5 @@ token_usage/
 run_all.sh
 
 results_*.txt
+
+keys.txt

@@ -11,13 +11,17 @@ from typing import Dict, Tuple
 
 import numpy as np
 import ray
-<<<<<<< HEAD
-=======
+
 from skythought_evals.tasks.gpqa_diamond.gpqa_diamond_handler import GPQADiamondTaskHandler
+
 from batch import Pipeline, init_engine_from_config
 from batch.env_config import EnvConfig
 from batch.workload import EvalWorkload, load_config_from_path
->>>>>>> c2f5b5e (Add GPQA)
+
+from skythought_evals.batch import Pipeline, init_engine_from_config
+from skythought_evals.batch.env_config import EnvConfig
+from skythought_evals.batch.workload import EvalWorkload, load_config_from_path
+
 from openai import OpenAI
 from skythought_evals.batch import Pipeline, init_engine_from_config
 from skythought_evals.batch.env_config import EnvConfig
@@ -41,6 +45,10 @@ from vllm import LLM, SamplingParams
 
 from skythought_evals.tasks.livecodebench.livecodebench_handler import LiveCodeBenchTaskHandler
 from skythought_evals.tasks.math.math_handler import MathTaskHandler
+
+from skythought_evals.tasks.apps.apps_handler import APPSTaskHandler
+
+from skythought_evals.tasks.taco.taco_handler import TACOTaskHandler
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
@@ -214,7 +222,7 @@ def perform_inference_and_check(
     if args.prompt_style == "no_thinking":
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
-        elif isinstance(handler, LiveCodeBenchTaskHandler):
+        elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
 
     conversations = handler.make_conversations(
@@ -229,7 +237,7 @@ def perform_inference_and_check(
                         "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the problem.\n",
                     }
                 )
-        elif isinstance(handler, LiveCodeBenchTaskHandler):
+        elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
                     {
@@ -242,7 +250,7 @@ def perform_inference_and_check(
             conv.append(
                 {
                     "role": "assistant",
-                    "content": "<think>",
+                    "content": "<think>\n",
                 }
             )
     for temp in temperatures:
