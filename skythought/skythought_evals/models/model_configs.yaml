@@ -79,5 +79,8 @@ models:
   deepseek-ai/DeepSeek-R1-Distill-Qwen-32B:
     name: DeepSeek-R1-Distill-Qwen-32B
 
+  xiaomama2002/NoThinking-R1-Distill-Qwen-32B:
+    name: NoThinking-R1-Distill-Qwen-32B
+
   Qwen/Qwen2.5-32B:
     name: Qwen2.5-32B
