@@ -66,7 +66,6 @@ def parse_arguments():
     )
     parser.add_argument(
         "--continue_final_message",
-        type=bool,
         action="store_true",
         help="Continue the final message from the model.",
     )
@@ -120,7 +119,6 @@ def main():
         assert (
             eval_name in TASK_NAMES_TO_YAML.keys()
         ), f"Task {eval_name} not found, should be one of {TASK_NAMES_TO_YAML.keys()}"
-        print("Continue final message", args.continue_final_message)
         command = [
             "python",
             script_path,
