@@ -67,8 +67,14 @@ def parse_arguments():
     parser.add_argument(
         "--continue_final_message",
         type=bool,
-        required=True,
+        action="store_true",
         help="Continue the final message from the model.",
+    )
+    parser.add_argument(
+        "--max_tokens",
+        type=int,
+        default=16384,
+        help="Max tokens for the model.",
     )
     return parser.parse_args()
 
@@ -114,6 +120,7 @@ def main():
         assert (
             eval_name in TASK_NAMES_TO_YAML.keys()
         ), f"Task {eval_name} not found, should be one of {TASK_NAMES_TO_YAML.keys()}"
+        print("Continue final message", args.continue_final_message)
         command = [
             "python",
             script_path,
@@ -129,8 +136,8 @@ def main():
             str(args.end),
             "--prompt_style",
             args.prompt_style,
-            "--continue_final_message",
-            str(args.continue_final_message),
+            "--max_tokens",
+            str(args.max_tokens),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments
@@ -142,6 +149,8 @@ def main():
                 args.result_dir,
             ]
         )
+        if args.continue_final_message:
+            command.append("--continue_final_message")
 
         if args.chat_template:
             command.append("--chat_template")

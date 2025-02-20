@@ -168,13 +168,14 @@ def inference(llm, conversations, max_tokens, temp, args):
                 custom_chat_template = f.read()
         else:
             custom_chat_template = None
+        print("Continue final message", args.continue_final_message)
         responses = llm.chat(
             messages=conversations,
             sampling_params=sampling_params,
             use_tqdm=True,
             continue_final_message=args.continue_final_message,
             add_generation_prompt=not args.continue_final_message,
-            # chat_template=custom_chat_template,
+            chat_template=custom_chat_template,
         )
         responses = [Response.from_vllm_response(response) for response in responses]
 
@@ -722,7 +723,7 @@ def main():
     parser.add_argument(
         "--continue_final_message",
         type=bool,
-        default=False,
+        action="store_true",
         help="Continue the final message from the model.",
     )
 
