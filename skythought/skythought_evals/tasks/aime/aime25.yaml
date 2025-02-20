@@ -1,8 +1,10 @@
 handler: aime
-dataset_path: opencompass/AIME2025
+dataset_path: xiaomama2002/AIME-2022-2025
 dataset_split: train
-question_key: question
+question_key: problem
 answer_key: answer
 templating_parameters:
-  template: "{prompt}\nReturn your final response within \\boxed{{}}"
+  template: "Return your final response within \\boxed{{}}. {prompt}"
+preprocess_config:
+  url: "2025"
 

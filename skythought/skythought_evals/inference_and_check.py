@@ -174,7 +174,7 @@ def inference(llm, conversations, max_tokens, temp, args):
             use_tqdm=True,
             continue_final_message=args.continue_final_message,
             add_generation_prompt=not args.continue_final_message,
-            chat_template=custom_chat_template,
+            # chat_template=custom_chat_template,
         )
         responses = [Response.from_vllm_response(response) for response in responses]
 
@@ -782,7 +782,7 @@ def main():
     temperature_str = ",".join(map(str, temperatures))
     file_suffix = (
         f"{model_config.name}_{args.task}_{args.split}_subset_{args.subset}_filter_{args.filter_difficulty}"
-        + f"_s{args.start}_e{args.end}_t{temperature_str}_n{args.n}"
+        + f"_s{args.start}_e{args.end}_t{temperature_str}_n{args.n}_{args.prompt_style}"
     )
     if (
         args.math_difficulty_lower_bound is not None
@@ -795,15 +795,7 @@ def main():
     else:
         result_file = os.path.join(
             args.result_dir,
-<<<<<<< HEAD
-<<<<<<< HEAD
             f"{file_suffix}.json",
-=======
-            f"{model_config.name}_{args.task}_{args.prompt_style}_{args.split}_{args.subset}_{args.filter_difficulty}_{args.start}_{args.end}.json",
->>>>>>> b4c5074 (Add prompt style to result file name)
-=======
-            f"{model_config.name}_{args.task}_{args.prompt_style}_{args.split}_{args.subset}_{args.difficulty}_{args.start}_{args.end}.json",
->>>>>>> 3c38cbd (Add more options to eval)
         )
 
     if args.check:

@@ -15,8 +15,10 @@ class MathTaskHandler(TaskHandler):
 
     def check_correctness(self, problem, generation):
         answer = strip_answer_string(problem[self.task_config.answer_key])
+        print(f"answer string: {answer}")
         pred = extract_answer(generation)
         pred = strip_answer_string(pred)
+        print(f"pred: {pred}, answer: {answer}")
         return math_equal(pred, answer)
 
     def update_results(self, problem, response):

@@ -98,10 +98,6 @@ def write_logs_to_file(logs, output_file):
 
 def main():
     args = parse_arguments()
-    if args.output_file:
-        warnings.warn(
-            "`output-file` CLI argument is obsolete and will be ignored.", stacklevel=1
-        )
     # Extract the arguments
     model_path = args.model
     evals = args.evals.split(",")
@@ -141,7 +137,7 @@ def main():
         command.extend(
             [
                 "--n",
-                args.n,
+                str(args.n),
                 "--result-dir",
                 args.result_dir,
             ]
