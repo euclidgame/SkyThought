@@ -84,3 +84,7 @@ models:
 
   Qwen/Qwen2.5-32B:
     name: Qwen2.5-32B
+
+  simplescaling/s1.1-32B:
+    name: s1.1-32B
+    system_prompt: *qwen_cot_system_prompt

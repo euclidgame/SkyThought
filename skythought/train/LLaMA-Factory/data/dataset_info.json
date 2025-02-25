@@ -633,10 +633,11 @@
     },
     "folder": "python"
   },
-  "NoThinking-Experiment-5k": {
-    "file_name": "xiaomama2002/NoThinking-Experiment-5k",
+  "s1-no-thinking": {
+    "hf_hub_url": "xiaomama2002/s1K-1.1_direct",
     "formatting": "sharegpt",
     "columns": {
+      "system": "system",
       "messages": "conversations"
     },
     "tags": {

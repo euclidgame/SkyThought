@@ -224,6 +224,11 @@ def perform_inference_and_check(
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
+    elif args.prompt_style == "thinking":
+        if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
+            model_config.user_template = "{}\nYou should carefully think about the problem and reason step by step."
+        elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
+            model_config.user_template = "{}\nYou should carefully think about the problem and reason step by step."
 
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
@@ -234,7 +239,8 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the problem.\n",
+                        "content": "<|im_start|>think\nOkay I have finished thinking about the problem.\n<|im_start|>answer\nAnswer:",
+                        # "content": "<think>\nOkay I have finished thinking.\n</think>\nHere are the steps I took to solve the problem and the final answer:\n",
                     }
                 )
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
@@ -250,7 +256,7 @@ def perform_inference_and_check(
             conv.append(
                 {
                     "role": "assistant",
-                    "content": "<think>\n",
+                    "content": "<|im_start|>think\n",
                 }
             )
     for temp in temperatures:
@@ -698,7 +704,7 @@ def main():
         choices=["float32", "auto", "float16", "bfloat16"],
         help="dtype for inference with vLLM. Full-precision by default."
         "'auto' refers to automatically inferring dtype for the model",
-        default="float32",
+        default="bfloat16",
     )
     parser.add_argument(
         "--top_p",
@@ -818,7 +824,7 @@ def main():
                 OpenAI()
                 if args.model.startswith("openai")
                 else LLM(
-                    model=args.model, tensor_parallel_size=args.tp, dtype=args.dtype
+                    model=args.model, tensor_parallel_size=args.tp, dtype=args.dtype, enable_chunked_prefill=False
                 )
             )
         if args.inference:

@@ -1,5 +1,5 @@
 ### model
-model_name_or_path: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+model_name_or_path: simplescaling/s1.1-32B
 
 ### method
 stage: sft
@@ -8,7 +8,7 @@ finetuning_type: full
 deepspeed: examples/deepspeed/ds_z3_offload_config.json  # choices: [ds_z0_config.json, ds_z2_config.json, ds_z3_config.json]
 
 ### dataset
-dataset: NoThinking-Experiment-5k
+dataset: s1-no-thinking
 template: qwen25
 cutoff_len: 16384
 max_samples: 1000000
@@ -16,7 +16,7 @@ overwrite_cache: true
 preprocessing_num_workers: 16
 
 ### output
-output_dir: saves/NoThinking-Experiment-5k/full/original
+output_dir: saves/s1-no-thinking/full/original
 logging_steps: 1
 save_steps: 100
 plot_loss: true
@@ -24,8 +24,8 @@ plot_loss: true
 ### train
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 12
-learning_rate: 1.0e-5
-num_train_epochs: 3.0
+learning_rate: 1.0e-6
+num_train_epochs: 2.0
 lr_scheduler_type: cosine
 warmup_ratio: 0.1
 bf16: true

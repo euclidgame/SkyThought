@@ -72,7 +72,7 @@ def parse_arguments():
     parser.add_argument(
         "--max_tokens",
         type=int,
-        default=16384,
+        default=32768,
         help="Max tokens for the model.",
     )
     return parser.parse_args()
