@@ -18,7 +18,7 @@ preprocessing_num_workers: 16
 ### output
 output_dir: $HOME/s1-no-thinking-5-epochs/full/
 logging_steps: 1
-save_steps: 20
+save_steps: 20ex
 plot_loss: true
 
 ### train

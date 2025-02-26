@@ -782,24 +782,25 @@ def main():
         args.difficulty = handler.task_config.preprocess_config["difficulty"]
 
     # create result dir if not exists
-    if args.result_dir and not os.path.exists(args.result_dir):
-        os.makedirs(args.result_dir)
     temperature_str = ",".join(map(str, temperatures))
+    result_dir = f'{args.result_dir}/{args.task}/{args.prompt_style}/temp_{temperature_str}/Pass_at_{args.n}/'
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
     file_suffix = (
-        f"{model_config.name}_{args.task}_{args.split}_subset_{args.subset}_filter_{args.filter_difficulty}"
-        + f"_s{args.start}_e{args.end}_t{temperature_str}_n{args.n}_{args.prompt_style}"
+        f"{model_config.name}"
+        + f"_s{args.start}_e{args.end}"
     )
     if (
         args.math_difficulty_lower_bound is not None
         or args.math_difficulty_upper_bound is not None
     ):
         result_file = os.path.join(
-            args.result_dir,
+            result_dir,
             f"{model_config.name}_{file_suffix}_{args.math_difficulty_upper_bound}.json",
         )
     else:
         result_file = os.path.join(
-            args.result_dir,
+            result_dir,
             f"{file_suffix}.json",
         )
 
