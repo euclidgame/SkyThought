@@ -216,28 +216,7 @@ def inference(llm, conversations, max_tokens, temp, args):
                 for idx, (response_idx, i) in enumerate(continuations_needed):
                     responses[response_idx].response[i] += new_responses[idx].response[0]
                     responses[response_idx].num_completion_tokens[i] += new_responses[idx].num_completion_tokens[0]
-            # for response in responses:
-            #     for i in range(len(response.response)):
-            #         if response.num_completion_tokens[i] == args.max_tokens:
-            #             if conversations[i][-1]['role'] == 'assistant':
-            #                 conversations[i][-1]['content'] += response.response[i] + '\n\n##Final Answer:'
-            #             else:
-            #                 conversations[i].append({
-            #                     'role': 'assistant',
-            #                     'content': response.response[i] + '\n\n##Final Answer:'
-            #                 })
-            #             sampling_params.n = 1
-            #             new_responses = llm.chat(
-            #                 messages=conversations,
-            #                 sampling_params=sampling_params,
-            #                 use_tqdm=True,
-            #                 continue_final_message=True,
-            #                 add_generation_prompt=False,
-            #                 chat_template=custom_chat_template,
-            #             )
-            #             new_responses = [Response.from_vllm_response(response) for response in new_responses]
-            #             response.response[i] = new_responses[0].response[0]
-            #             response.num_completion_tokens[i] += new_responses[0].num_completion_tokens[0]
+
     return responses
 
 
@@ -324,7 +303,13 @@ def perform_inference_and_check(
             print("No more data to process")
             continue
 
+        print(f"Conversations 1:")
+        print(conversations)
+
         responses = inference(llm, conversations, max_tokens, temp, args)
+
+        print(f"Conversations 2:")
+        print(conversations)
 
         total_correct = 0
         total_finish = 0
@@ -374,6 +359,8 @@ def perform_inference_and_check(
                             prompt = conv["content"]
                             break
                     results[problem_key]["prompt"] = prompt
+                    print(f"Conversations 3:")
+                    print(conversations[idx])
                     results[problem_key]["input_conversation"] = conversations[idx]
                     temperature_to_scores[temp][problem_key] = [
                         0 for _ in range(args.n)
