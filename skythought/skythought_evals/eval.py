@@ -55,7 +55,7 @@ def parse_arguments():
         "--prompt_style",
         type=str,
         default="normal",
-        choices=["thinking", "no_thinking", "normal"],
+        choices=["thinking_r1", "no_thinking_r1", "normal"],
         help="Prompt style for the model.",
     )
     parser.add_argument(
@@ -74,6 +74,17 @@ def parse_arguments():
         type=int,
         default=32768,
         help="Max tokens for the model.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Seed for the model.",
+    )
+    parser.add_argument(
+        "--budget_force",
+        action="store_true",
+        help="Force the budget of the model.",
     )
     return parser.parse_args()
 
@@ -147,6 +158,11 @@ def main():
                 args.result_dir,
             ]
         )
+        if args.budget_force:
+            command.append("--budget_force")
+        if args.seed:
+            command.append("--seed")
+            command.append(str(args.seed))
         if args.continue_final_message:
             command.append("--continue_final_message")
 

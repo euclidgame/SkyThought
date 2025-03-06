@@ -178,6 +178,66 @@ def inference(llm, conversations, max_tokens, temp, args):
         )
         responses = [Response.from_vllm_response(response) for response in responses]
 
+        if args.budget_force:
+            continuations_needed = []
+            modified_conversations = []
+            
+            for response_idx, response in enumerate(responses):
+                for i in range(len(response.response)):
+                    if response.num_completion_tokens[i] == args.max_tokens:
+                        # Add or modify conversation with prompt for continuation
+                        conv = conversations[response_idx].copy()
+                        if conv[-1]['role'] == 'assistant':
+                            conv[-1]['content'] += response.response[i] + '\n\nFinal Answer: the final answer is'
+                        else:
+                            conv.append({
+                                'role': 'assistant',
+                                'content': response.response[i] + '\n\nFinal Answer: the final answer is'
+                            })
+                        
+                        # Track which responses need updating
+                        continuations_needed.append((response_idx, i))
+                        modified_conversations.append(conv)
+            
+            # Only make one batch call if continuations are needed
+            if continuations_needed:
+                sampling_params.n = 1
+                new_responses = llm.chat(
+                    messages=modified_conversations,
+                    sampling_params=sampling_params,
+                    use_tqdm=True,
+                    continue_final_message=True,
+                    add_generation_prompt=False,
+                    chat_template=custom_chat_template,
+                )
+                new_responses = [Response.from_vllm_response(response) for response in new_responses]
+                
+                # Update original responses with continuations
+                for idx, (response_idx, i) in enumerate(continuations_needed):
+                    responses[response_idx].response[i] += new_responses[idx].response[0]
+                    responses[response_idx].num_completion_tokens[i] += new_responses[idx].num_completion_tokens[0]
+            # for response in responses:
+            #     for i in range(len(response.response)):
+            #         if response.num_completion_tokens[i] == args.max_tokens:
+            #             if conversations[i][-1]['role'] == 'assistant':
+            #                 conversations[i][-1]['content'] += response.response[i] + '\n\n##Final Answer:'
+            #             else:
+            #                 conversations[i].append({
+            #                     'role': 'assistant',
+            #                     'content': response.response[i] + '\n\n##Final Answer:'
+            #                 })
+            #             sampling_params.n = 1
+            #             new_responses = llm.chat(
+            #                 messages=conversations,
+            #                 sampling_params=sampling_params,
+            #                 use_tqdm=True,
+            #                 continue_final_message=True,
+            #                 add_generation_prompt=False,
+            #                 chat_template=custom_chat_template,
+            #             )
+            #             new_responses = [Response.from_vllm_response(response) for response in new_responses]
+            #             response.response[i] = new_responses[0].response[0]
+            #             response.num_completion_tokens[i] += new_responses[0].num_completion_tokens[0]
     return responses
 
 
@@ -219,12 +279,12 @@ def perform_inference_and_check(
     temperature_to_acc = {}
     responses = []
 
-    if args.prompt_style == "no_thinking":
+    if args.prompt_style.startswith("no_thinking"):
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
-            model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the solution directly."
+            model_config.user_template = "{}\nPlease write the answer for this math problem directly without any thinking process."
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
-    elif args.prompt_style == "thinking":
+    elif args.prompt_style.startswith("thinking"):
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nYou should carefully think about the problem and reason step by step."
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
@@ -233,14 +293,14 @@ def perform_inference_and_check(
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
-    if args.prompt_style == "no_thinking":
+    if args.prompt_style == "no_thinking_r1":
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<|im_start|>think\nOkay I have finished thinking about the problem.\n<|im_start|>answer\nAnswer:",
-                        # "content": "<think>\nOkay I have finished thinking.\n</think>\nHere are the steps I took to solve the problem and the final answer:\n",
+                        # "content": "<|im_start|>think\nOkay I have finished thinking about the problem.\n<|im_start|>answer\nAnswer:",
+                        "content": "<think>\nOkay I have finished thinking.\n</think>\nLet's solve the problem.",
                     }
                 )
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
@@ -251,7 +311,7 @@ def perform_inference_and_check(
                         "content": "<think>\nOkay, I have finished thinking.\n</think>\n```python\n",
                     }
                 )
-    elif args.prompt_style == "thinking":
+    elif args.prompt_style == "thinking_r1":
         for i, conv in enumerate(conversations):
             conv.append(
                 {
@@ -715,8 +775,8 @@ def main():
     parser.add_argument(
         "--prompt_style",
         type=str,
-        default="thinking",
-        choices=["thinking", "no_thinking", "normal"],
+        default="thinking_r1",
+        choices=["thinking_r1", "no_thinking_r1", "normal"],
         help="Prompt style for the model.",
     )
     parser.add_argument(
@@ -729,6 +789,11 @@ def main():
         "--continue_final_message",
         action="store_true",
         help="Continue the final message from the model.",
+    )
+    parser.add_argument(
+        "--budget_force",
+        action="store_true",
+        help="Force the budget of the model.",
     )
 
     args = parser.parse_args()
@@ -825,7 +890,8 @@ def main():
                 OpenAI()
                 if args.model.startswith("openai")
                 else LLM(
-                    model=args.model, tensor_parallel_size=args.tp, dtype=args.dtype, enable_chunked_prefill=False
+                    model=args.model, tensor_parallel_size=args.tp, dtype=args.dtype, enable_chunked_prefill=False, seed=args.seed, swap_space=0,
+                    enforce_eager=True, enable_prefix_caching=True,
                 )
             )
         if args.inference:
