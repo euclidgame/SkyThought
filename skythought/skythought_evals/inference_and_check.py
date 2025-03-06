@@ -378,6 +378,8 @@ def perform_inference_and_check(
                     temperature_to_scores[temp][problem_key] = [
                         0 for _ in range(args.n)
                     ]
+                    if results[problem_key]["test"] is not None:
+                        results[problem_key].remove("test")
 
                 if str(temp) not in results[problem_key]["responses"]:
                     results[problem_key]["responses"][str(temp)] = [
