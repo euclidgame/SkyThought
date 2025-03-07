@@ -361,8 +361,6 @@ def perform_inference_and_check(
                     temperature_to_scores[temp][problem_key] = [
                         0 for _ in range(args.n)
                     ]
-                    if 'test' in results[problem_key]:
-                        del results[problem_key]['test']
 
                 if str(temp) not in results[problem_key]["responses"]:
                     results[problem_key]["responses"][str(temp)] = [
@@ -437,6 +435,10 @@ def perform_inference_and_check(
         json.dump(metrics_dict, f, indent=4)
 
     print(f"Metrics saved to {metrics_result_file}")
+
+    for key, value in results.items():
+        if 'test' in value:
+            del value['test']
 
     with open(result_file, "w", encoding="utf-8") as file:
         json.dump(results, file, ensure_ascii=False, indent=4, cls=NumpyEncoder)
