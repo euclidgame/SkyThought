@@ -186,13 +186,14 @@ def inference(llm, conversations, max_tokens, temp, args):
                 for i in range(len(response.response)):
                     if response.num_completion_tokens[i] == args.max_tokens:
                         # Add or modify conversation with prompt for continuation
-                        conv = conversations[response_idx].copy()
+                        conv = copy.deepcopy(conversations[response_idx])
+                        response.response[i] += '\n\nFinal Answer: the final answer is'
                         if conv[-1]['role'] == 'assistant':
-                            conv[-1]['content'] += response.response[i] + '\n\nFinal Answer: the final answer is'
+                            conv[-1]['content'] += response.response[i]
                         else:
                             conv.append({
                                 'role': 'assistant',
-                                'content': response.response[i] + '\n\nFinal Answer: the final answer is'
+                                'content': response.response[i]
                             })
                         
                         # Track which responses need updating
@@ -202,6 +203,7 @@ def inference(llm, conversations, max_tokens, temp, args):
             # Only make one batch call if continuations are needed
             if continuations_needed:
                 sampling_params.n = 1
+                sampling_params.max_tokens = 50
                 new_responses = llm.chat(
                     messages=modified_conversations,
                     sampling_params=sampling_params,
@@ -303,13 +305,7 @@ def perform_inference_and_check(
             print("No more data to process")
             continue
 
-        print(f"Conversations 1:")
-        print(conversations)
-
         responses = inference(llm, conversations, max_tokens, temp, args)
-
-        print(f"Conversations 2:")
-        print(conversations)
 
         total_correct = 0
         total_finish = 0
