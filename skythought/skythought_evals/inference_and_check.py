@@ -834,6 +834,8 @@ def main():
     # create result dir if not exists
     temperature_str = ",".join(map(str, temperatures))
     result_dir = f'{args.result_dir}/{args.task}/{args.prompt_style}/temp_{temperature_str}/Pass_at_{args.n}/'
+    if args.budget_force:
+        result_dir = f'{result_dir}/budget_force_{args.max_tokens}/'
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)
     file_suffix = (
