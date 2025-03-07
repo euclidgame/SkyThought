@@ -355,8 +355,6 @@ def perform_inference_and_check(
                             prompt = conv["content"]
                             break
                     results[problem_key]["prompt"] = prompt
-                    print(f"Conversations 3:")
-                    print(conversations[idx])
                     results[problem_key]["input_conversation"] = conversations[idx]
                     temperature_to_scores[temp][problem_key] = [
                         0 for _ in range(args.n)
