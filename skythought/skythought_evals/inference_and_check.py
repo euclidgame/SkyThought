@@ -297,7 +297,7 @@ def perform_inference_and_check(
             conv.append(
                 {
                     "role": "assistant",
-                    "content": "<|im_start|>think\n",
+                    "content": "<think>\n",
                 }
             )
     for temp in temperatures:
