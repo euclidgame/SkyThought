@@ -212,15 +212,33 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     return query_vllm_server(conversation)  # Recursive retry
             
             # Use ThreadPoolExecutor for better I/O-bound performance
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 responses_json = list(tqdm(
                     executor.map(query_vllm_server, conversations), 
                     total=len(conversations),
                     desc="Processing online inference"
                 ))
-            
-            # Convert the responses to the expected format
-            responses = [Response.from_openai_response(response) for response in responses_json]
+
+            responses = []
+            for response_dict in responses_json:
+                # Option 1: If Response class has a from_dict method
+                if hasattr(Response, 'from_dict'):
+                    responses.append(Response.from_dict(response_dict))
+                # Option 2: If we need to modify the dictionary to match expected format
+                else:
+                    # Extract the relevant information from the dictionary
+                    # This assumes a structure similar to OpenAI API responses
+                    choices = response_dict.get('choices', [])
+                    completion_tokens = response_dict.get('usage', {}).get('completion_tokens', 0)
+                    prompt_tokens = response_dict.get('usage', {}).get('prompt_tokens', 0)
+                    
+                    # Create a Response object directly
+                    response_obj = Response(
+                        response=[choice.get('message', {}).get('content', '') for choice in choices],
+                        num_completion_tokens=completion_tokens,
+                        num_input_tokens=prompt_tokens
+                    )
+                    responses.append(response_obj)
         else:
             if args.chat_template:
                 with open(args.chat_template, "r") as f:
