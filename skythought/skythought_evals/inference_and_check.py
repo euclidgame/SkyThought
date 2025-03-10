@@ -158,7 +158,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             fetch_response_openai, llm, args.model, max_tokens, temp, args.n
         )
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as e:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as e:
             responses = list(e.map(fetch_partial, conversations))
 
         responses = [Response.from_openai_response(response) for response in responses]
@@ -212,13 +212,16 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     return query_vllm_server(conversation)  # Recursive retry
             
             # Use ThreadPoolExecutor for better I/O-bound performance
-            with ThreadPoolExecutor(max_workers=10) as executor:
+            with ThreadPoolExecutor(max_workers=16) as executor:
                 responses_json = list(tqdm(
                     executor.map(query_vllm_server, conversations), 
                     total=len(conversations),
                     desc="Processing online inference"
                 ))
-
+            
+            # Create Response objects following the structure expected by from_openai_response
+            from skythought.skythought_evals.util.response import Response
+            
             responses = []
             for response_dict in responses_json:
                 # Option 1: If Response class has a from_dict method
@@ -235,9 +238,13 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     # Create a Response object directly
                     response_obj = Response(
                         response=[choice.get('message', {}).get('content', '') for choice in choices],
-                        num_completion_tokens=completion_tokens,
+                        num_completion_tokens=[
+                            response.usage.completion_tokens if i == 0 else 0
+                            for i in range(len(response.choices))
+                        ],
                         num_input_tokens=prompt_tokens
                     )
+                    
                     responses.append(response_obj)
         else:
             if args.chat_template:
