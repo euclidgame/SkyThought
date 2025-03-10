@@ -949,7 +949,7 @@ def main():
             cmd = f"""
             python -m vllm.entrypoints.api_server --model {args.model} \
             --tensor-parallel-size {args.tp} --dtype {args.dtype} \
-            --seed {args.seed} --enable-chunked-prefill {args.enable_chunked_prefill} \
+            --seed {args.seed} \
             --enable-prefix-caching --enforce-eager \
             """
             if args.chat_template:
