@@ -86,6 +86,11 @@ def parse_arguments():
         action="store_true",
         help="Force the budget of the model.",
     )
+    parser.add_argument(
+        "--online-inference",
+        action="store_true",
+        help="Use online inference.",
+    )
     return parser.parse_args()
 
 
@@ -160,6 +165,8 @@ def main():
         )
         if args.budget_force:
             command.append("--budget_force")
+        if args.online_inference:
+            command.append("--online-inference")
         if args.seed:
             command.append("--seed")
             command.append(str(args.seed))
