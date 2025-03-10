@@ -973,7 +973,7 @@ def main():
             )
         else:
             perform_inference_and_check(
-                handler, temperatures, max_tokens, result_file, llm, model_config, args, port
+                handler, temperatures, max_tokens, result_file, llm, model_config, port, args
             )
         if args.online_inference:
             terminate_process(server_process)
