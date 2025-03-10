@@ -967,14 +967,14 @@ def main():
                     enforce_eager=True, enable_prefix_caching=True,
                 )
             )
-        # if args.inference:
-        #     perform_inference_and_save(
-        #         handler, temperatures, max_tokens, result_file, llm, model_config, args
-        #     )
-        # else:
-        #     perform_inference_and_check(
-        #         handler, temperatures, max_tokens, result_file, llm, model_config, args, port
-        #     )
+        if args.inference:
+            perform_inference_and_save(
+                handler, temperatures, max_tokens, result_file, llm, model_config, args
+            )
+        else:
+            perform_inference_and_check(
+                handler, temperatures, max_tokens, result_file, llm, model_config, args, port
+            )
         if args.online_inference:
             terminate_process(server_process)
 
