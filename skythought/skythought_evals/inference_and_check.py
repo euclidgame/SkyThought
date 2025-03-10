@@ -142,7 +142,7 @@ def _parse_response_for_idx(
     return response_entry, token_usage_for_response
 
 
-def inference(llm, conversations, max_tokens, temp, args, port):
+def inference(llm, conversations, max_tokens, temp, port, args):
     if args.use_ray:
         responses = fetch_responses_ray(conversations, max_tokens, temp, args)
         responses = [
@@ -365,7 +365,7 @@ def perform_inference_and_check(
             print("No more data to process")
             continue
 
-        responses = inference(llm, conversations, max_tokens, temp, args)
+        responses = inference(llm, conversations, max_tokens, temp, port, args)
 
         total_correct = 0
         total_finish = 0
