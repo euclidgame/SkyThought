@@ -91,6 +91,9 @@ def parse_arguments():
         action="store_true",
         help="Use online inference.",
     )
+    parser.add_argument(
+        "--max-workers", type=int, default=16, help="Max workers for the model."
+    )
     return parser.parse_args()
 
 
@@ -152,6 +155,8 @@ def main():
             args.prompt_style,
             "--max_tokens",
             str(args.max_tokens),
+            "--max-workers",
+            str(args.max_workers),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments

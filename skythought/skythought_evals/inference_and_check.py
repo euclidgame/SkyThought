@@ -212,7 +212,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     return query_vllm_server(conversation)  # Recursive retry
             
             # Use ThreadPoolExecutor for better I/O-bound performance
-            with ThreadPoolExecutor(max_workers=16) as executor:
+            with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
                 responses_json = list(tqdm(
                     executor.map(query_vllm_server, conversations), 
                     total=len(conversations),
@@ -767,6 +767,9 @@ def main():
     parser.add_argument("--tp", type=int, default=8, help="Tensor Parallelism Degree")
     parser.add_argument(
         "--max_tokens", type=int, default=32768, help="Max tokens for the model."
+    )
+    parser.add_argument(
+        "--max-workers", type=int, default=16, help="Max workers for the model."
     )
     parser.add_argument(
         "--split",
