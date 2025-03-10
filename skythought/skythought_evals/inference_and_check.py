@@ -14,9 +14,9 @@ import ray
 
 from skythought_evals.tasks.gpqa_diamond.gpqa_diamond_handler import GPQADiamondTaskHandler
 
-from batch import Pipeline, init_engine_from_config
-from batch.env_config import EnvConfig
-from batch.workload import EvalWorkload, load_config_from_path
+from skythought_evals.batch import Pipeline, init_engine_from_config
+from skythought_evals.batch.env_config import EnvConfig
+from skythought_evals.batch.workload import EvalWorkload, load_config_from_path
 
 from skythought_evals.batch import Pipeline, init_engine_from_config
 from skythought_evals.batch.env_config import EnvConfig
@@ -202,7 +202,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                         f"{api_base_url}/chat/completions", 
                         headers=headers,
                         json=payload,
-                        timeout=1200
+                        timeout=1000000
                     )
                     response.raise_for_status()
                     return response.json()
