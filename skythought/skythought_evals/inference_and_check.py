@@ -948,7 +948,7 @@ def main():
             # python -m sglang.launch_server --model-path meta-llama/Meta-Llama-3.1-8B-Instruct --host 0.0.0.0
 
             cmd = f"""
-            python -m vllm.entrypoints.api_server --model {args.model} \
+            python -m vllm.entrypoints.openai.api_server --model {args.model} \
             --tensor-parallel-size {args.tp} --dtype {args.dtype} \
             --seed {args.seed} \
             --enable-prefix-caching --enforce-eager \
