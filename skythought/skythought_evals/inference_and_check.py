@@ -139,7 +139,7 @@ def _parse_response_for_idx(
     return response_entry, token_usage_for_response
 
 
-def inference(llm, conversations, max_tokens, temp, args):
+def inference(llm, conversations, max_tokens, temp, args, port):
     if args.use_ray:
         responses = fetch_responses_ray(conversations, max_tokens, temp, args)
         responses = [
@@ -163,61 +163,117 @@ def inference(llm, conversations, max_tokens, temp, args):
         sampling_params = SamplingParams(
             max_tokens=max_tokens, temperature=temp, n=args.n, top_p=args.top_p
         )
-        if args.chat_template:
-            with open(args.chat_template, "r") as f:
-                custom_chat_template = f.read()
-        else:
-            custom_chat_template = None
-        responses = llm.chat(
-            messages=conversations,
-            sampling_params=sampling_params,
-            use_tqdm=True,
-            continue_final_message=args.continue_final_message,
-            add_generation_prompt=not args.continue_final_message,
-            chat_template=custom_chat_template,
-        )
-        responses = [Response.from_vllm_response(response) for response in responses]
+        if args.online_inference:
+            import time
+            import requests
+            from concurrent.futures import ThreadPoolExecutor
+            from tqdm import tqdm
 
-        if args.budget_force:
-            continuations_needed = []
-            modified_conversations = []
+            # Configure the API endpoint for the vLLM server
+            api_base_url = f"http://localhost:{port}/v1"
             
-            for response_idx, response in enumerate(responses):
-                for i in range(len(response.response)):
-                    if response.num_completion_tokens[i] == args.max_tokens:
-                        # Add or modify conversation with prompt for continuation
-                        conv = copy.deepcopy(conversations[response_idx])
-                        response.response[i] += '\n\nFinal Answer: the final answer is'
-                        if conv[-1]['role'] == 'assistant':
-                            conv[-1]['content'] += response.response[i]
-                        else:
-                            conv.append({
-                                'role': 'assistant',
-                                'content': response.response[i]
-                            })
-                        
-                        # Track which responses need updating
-                        continuations_needed.append((response_idx, i))
-                        modified_conversations.append(conv)
-            
-            # Only make one batch call if continuations are needed
-            if continuations_needed:
-                sampling_params.n = 1
-                sampling_params.max_tokens = 50
-                new_responses = llm.chat(
-                    messages=modified_conversations,
-                    sampling_params=sampling_params,
-                    use_tqdm=True,
-                    continue_final_message=True,
-                    add_generation_prompt=False,
-                    chat_template=custom_chat_template,
-                )
-                new_responses = [Response.from_vllm_response(response) for response in new_responses]
+            def query_vllm_server(conversation):
+                """Function to send a request to vLLM server and handle potential errors."""
+                headers = {"Content-Type": "application/json"}
                 
-                # Update original responses with continuations
-                for idx, (response_idx, i) in enumerate(continuations_needed):
-                    responses[response_idx].response[i] += new_responses[idx].response[0]
-                    responses[response_idx].num_completion_tokens[i] += new_responses[idx].num_completion_tokens[0]
+                # Standard OpenAI API parameters
+                payload = {
+                    "model": args.model,
+                    "messages": conversation,
+                    "temperature": temp,
+                    "max_tokens": max_tokens,
+                    "n": args.n,
+                    "top_p": args.top_p,
+                    # Include custom parameters in the main payload
+                    "continue_final_message": args.continue_final_message,
+                    "add_generation_prompt": not args.continue_final_message
+                }
+                
+                # If using chat_template, add it to the payload
+                if args.chat_template:
+                    with open(args.chat_template, "r") as f:
+                        payload["chat_template"] = f.read()
+                
+                try:
+                    response = requests.post(
+                        f"{api_base_url}/chat/completions", 
+                        headers=headers,
+                        json=payload,
+                        timeout=1200
+                    )
+                    response.raise_for_status()
+                    return response.json()
+                except requests.exceptions.RequestException as e:
+                    print(f"Request error: {e}")
+                    time.sleep(5)
+                    return query_vllm_server(conversation)  # Recursive retry
+            
+            # Use ThreadPoolExecutor for better I/O-bound performance
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                responses_json = list(tqdm(
+                    executor.map(query_vllm_server, conversations), 
+                    total=len(conversations),
+                    desc="Processing online inference"
+                ))
+            
+            # Convert the responses to the expected format
+            responses = [Response.from_openai_response(response) for response in responses_json]
+        else:
+            if args.chat_template:
+                with open(args.chat_template, "r") as f:
+                    custom_chat_template = f.read()
+            else:
+                custom_chat_template = None
+            responses = llm.chat(
+                messages=conversations,
+                sampling_params=sampling_params,
+                use_tqdm=True,
+                continue_final_message=args.continue_final_message,
+                add_generation_prompt=not args.continue_final_message,
+                chat_template=custom_chat_template,
+            )
+            responses = [Response.from_vllm_response(response) for response in responses]
+
+            if args.budget_force:
+                continuations_needed = []
+                modified_conversations = []
+                
+                for response_idx, response in enumerate(responses):
+                    for i in range(len(response.response)):
+                        if response.num_completion_tokens[i] == args.max_tokens:
+                            # Add or modify conversation with prompt for continuation
+                            conv = copy.deepcopy(conversations[response_idx])
+                            response.response[i] += '\n\nFinal Answer: the final answer is'
+                            if conv[-1]['role'] == 'assistant':
+                                conv[-1]['content'] += response.response[i]
+                            else:
+                                conv.append({
+                                    'role': 'assistant',
+                                    'content': response.response[i]
+                                })
+                            
+                            # Track which responses need updating
+                            continuations_needed.append((response_idx, i))
+                            modified_conversations.append(conv)
+                
+                # Only make one batch call if continuations are needed
+                if continuations_needed:
+                    sampling_params.n = 1
+                    sampling_params.max_tokens = 50
+                    new_responses = llm.chat(
+                        messages=modified_conversations,
+                        sampling_params=sampling_params,
+                        use_tqdm=True,
+                        continue_final_message=True,
+                        add_generation_prompt=False,
+                        chat_template=custom_chat_template,
+                    )
+                    new_responses = [Response.from_vllm_response(response) for response in new_responses]
+                    
+                    # Update original responses with continuations
+                    for idx, (response_idx, i) in enumerate(continuations_needed):
+                        responses[response_idx].response[i] += new_responses[idx].response[0]
+                        responses[response_idx].num_completion_tokens[i] += new_responses[idx].num_completion_tokens[0]
 
     return responses
 
@@ -237,6 +293,7 @@ def perform_inference_and_check(
     result_file,
     llm,
     model_config,
+    port,
     args,
 ):
     results = load_existing_results(result_file)
@@ -567,7 +624,7 @@ def perform_inference_and_save(
         if len(conversations) == 0:
             print("No more data to process")
             continue
-        responses = inference(llm, conversations, max_tokens, temp, args)
+        responses = inference(llm, conversations, max_tokens, temp, args, port)
 
         completion_tokens = []
         prompt_tokens = []
@@ -655,7 +712,7 @@ def main():
         help="The model to run.",
     )
     parser.add_argument("--tp", type=int, default=8, help="Tensor Parallelism Degree")
-    parser.add_argument(
+    parser.add_argument("--dp", type=int, default=1, help="Data Parallelism Degree")
         "--max_tokens", type=int, default=32768, help="Max tokens for the model."
     )
     parser.add_argument(
@@ -724,6 +781,9 @@ def main():
     parser.add_argument("--seed", type=int, default=41, help="Random seed.")
     parser.add_argument(
         "--use-ray", action="store_true", help="Use ray for scaling inference."
+    )
+    parser.add_argument(
+        "--online-inference", action="store_true", help="Use online inference."
     )
     parser.add_argument(
         "--ray-config",
@@ -870,8 +930,33 @@ def main():
         perform_check(handler, temperatures, result_file, args)
         return
     else:
+        port = 0
         if args.use_ray:
             llm = None
+        elif args.online_inference:
+            llm = None
+            from sglang.test.test_utils import is_in_ci
+            from sglang.utils import wait_for_server, print_highlight, terminate_process
+            if is_in_ci():
+                from patch import launch_server_cmd
+            else:
+                from sglang.utils import launch_server_cmd
+
+            # This is equivalent to running the following command in your terminal
+
+            # python -m sglang.launch_server --model-path meta-llama/Meta-Llama-3.1-8B-Instruct --host 0.0.0.0
+
+            cmd = f"""
+            python -m vllm.entrypoints.api_server --model {args.model} \
+            --tensor-parallel-size {args.tp} --dtype {args.dtype} \
+            --seed {args.seed} --enable-chunked-prefill {args.enable_chunked_prefill} \
+            --enable-prefix-caching --enforce-eager \
+            """
+            if args.chat_template:
+                cmd += f" --chat-template {args.chat_template} --host 0.0.0.0"
+            server_process, port = launch_server_cmd(cmd)
+
+            wait_for_server(f"http://localhost:{port}")
         else:
             llm = (
                 OpenAI()
@@ -887,7 +972,7 @@ def main():
             )
         else:
             perform_inference_and_check(
-                handler, temperatures, max_tokens, result_file, llm, model_config, args
+                handler, temperatures, max_tokens, result_file, llm, model_config, args, port
             )
 
 
