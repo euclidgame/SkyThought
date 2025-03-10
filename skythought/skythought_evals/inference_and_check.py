@@ -712,7 +712,7 @@ def main():
         help="The model to run.",
     )
     parser.add_argument("--tp", type=int, default=8, help="Tensor Parallelism Degree")
-    parser.add_argument("--dp", type=int, default=1, help="Data Parallelism Degree")
+    parser.add_argument(
         "--max_tokens", type=int, default=32768, help="Max tokens for the model."
     )
     parser.add_argument(
