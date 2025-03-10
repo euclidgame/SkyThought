@@ -50,6 +50,9 @@ from skythought_evals.tasks.apps.apps_handler import APPSTaskHandler
 
 from skythought_evals.tasks.taco.taco_handler import TACOTaskHandler
 
+from sglang.test.test_utils import is_in_ci
+from sglang.utils import wait_for_server, print_highlight, terminate_process
+
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
 
@@ -935,8 +938,6 @@ def main():
             llm = None
         elif args.online_inference:
             llm = None
-            from sglang.test.test_utils import is_in_ci
-            from sglang.utils import wait_for_server, print_highlight, terminate_process
             if is_in_ci():
                 from patch import launch_server_cmd
             else:
@@ -966,14 +967,16 @@ def main():
                     enforce_eager=True, enable_prefix_caching=True,
                 )
             )
-        if args.inference:
-            perform_inference_and_save(
-                handler, temperatures, max_tokens, result_file, llm, model_config, args
-            )
-        else:
-            perform_inference_and_check(
-                handler, temperatures, max_tokens, result_file, llm, model_config, args, port
-            )
+        # if args.inference:
+        #     perform_inference_and_save(
+        #         handler, temperatures, max_tokens, result_file, llm, model_config, args
+        #     )
+        # else:
+        #     perform_inference_and_check(
+        #         handler, temperatures, max_tokens, result_file, llm, model_config, args, port
+        #     )
+        if args.online_inference:
+            terminate_process(server_process)
 
 
 if __name__ == "__main__":
