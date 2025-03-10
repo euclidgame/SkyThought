@@ -239,8 +239,8 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     response_obj = Response(
                         response=[choice.get('message', {}).get('content', '') for choice in choices],
                         num_completion_tokens=[
-                            response.usage.completion_tokens if i == 0 else 0
-                            for i in range(len(response.choices))
+                            completion_tokens if i == 0 else 0
+                            for i in range(len(choices))
                         ],
                         num_input_tokens=prompt_tokens
                     )
