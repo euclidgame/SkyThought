@@ -488,6 +488,31 @@ def perform_inference_and_check(
         "accuracy": temperature_to_acc,
     }
 
+    from colorama import Fore, Style, init
+    init()  # Initialize colorama
+    
+    print(f"\n{Fore.CYAN}===== Evaluation Metrics ====={Style.RESET_ALL}")
+    print(f"{Fore.GREEN}Token Usage:{Style.RESET_ALL}")
+    print(f"  {Fore.YELLOW}Completion Tokens:{Style.RESET_ALL} {metrics_dict['completion_tokens']}")
+    print(f"  {Fore.YELLOW}Prompt Tokens:{Style.RESET_ALL} {metrics_dict['prompt_tokens']}")
+    print(f"  {Fore.YELLOW}Avg Completion Tokens:{Style.RESET_ALL} {metrics_dict['avg_completion_tokens']}")
+    print(f"  {Fore.YELLOW}Avg Prompt Tokens:{Style.RESET_ALL} {metrics_dict['avg_prompt_tokens']}")
+    
+    print(f"\n{Fore.GREEN}Performance Metrics:{Style.RESET_ALL}")
+    if metrics_dict['pass_at_k']:
+        print(f"  {Fore.YELLOW}Pass@k:{Style.RESET_ALL}")
+        for k, value in metrics_dict['pass_at_k'].items():
+            print(f"    {Fore.BLUE}{k}:{Style.RESET_ALL} {value}")
+    
+    print(f"\n{Fore.GREEN}Accuracy by Temperature:{Style.RESET_ALL}")
+    if metrics_dict['accuracy']:
+        for temp, acc in metrics_dict['accuracy'].items():
+            print(f"  {Fore.BLUE}Temperature {temp}:{Style.RESET_ALL} {acc}")
+    
+    # Also print the raw dictionary for reference
+    print(f"\n{Fore.CYAN}Raw Metrics Dictionary:{Style.RESET_ALL}")
+    
+
     # Save the token usage dictionary to the result file
     with open(metrics_result_file, "w") as f:
         json.dump(metrics_dict, f, indent=4)
