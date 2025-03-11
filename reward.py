@@ -198,4 +198,4 @@ if __name__ == "__main__":
     candidate_tokens = [plus_tag_id,minus_tag_id]
     # print(candidate_tokens)
 
-    process_and_select_answers('results_1/aime25/no_thinking_r1/temp_0.6/Pass_at_16/metrics/DeepSeek-R1-Distill-Qwen-32B_s0_e-1.json', model, tokenizer, candidate_tokens)
+    process_and_select_answers('results_1/aime25/no_thinking_r1/temp_0.6/Pass_at_16/DeepSeek-R1-Distill-Qwen-32B_s0_e-1.json', model, tokenizer, candidate_tokens)
