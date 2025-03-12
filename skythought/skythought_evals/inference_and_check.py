@@ -265,7 +265,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     batch_responses = llm.chat(
                         messages=conversations,
                         sampling_params=sampling_params,
-                        use_tqdm=False,  # Disable inner tqdm since we have outer progress bar
+                        use_tqdm=True,  # Disable inner tqdm since we have outer progress bar
                         continue_final_message=args.continue_final_message,
                         add_generation_prompt=not args.continue_final_message,
                         chat_template=custom_chat_template,
