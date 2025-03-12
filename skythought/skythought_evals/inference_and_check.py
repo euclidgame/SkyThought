@@ -377,14 +377,7 @@ def perform_inference_and_check(
                         "content": "<think>\nOkay, I have finished thinking.\n</think>\n```python\n",
                     }
                 )
-    elif args.prompt_style == "thinking_r1":
-        for i, conv in enumerate(conversations):
-            conv.append(
-                {
-                    "role": "assistant",
-                    "content": "<think>\n",
-                }
-            )
+
     for temp in temperatures:
         if len(conversations) == 0:
             print("No more data to process")

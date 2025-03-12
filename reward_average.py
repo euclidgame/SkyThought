@@ -10,16 +10,16 @@ import time
 import os
 import sys
 import re
-
+from copy import deepcopy
 from vllm import SamplingParams, LLM
 
-def process_reward_score(prompts_and_answers, llm, candidate_tokens):
+def process_reward_score(prompts_and_answers, llm, tokenizer, candidate_tokens):
     all_conversations = []
-
-    answers_per_problem = len(prompts_and_answers[0][1])  # Number of answers per problem
+    answer_lengths = []  # To keep track of steps for each answer
 
     # Prepare all conversations at once
     for prompt, answers in prompts_and_answers:
+        problem_lengths = []  # Track lengths for each answer in this problem
         for ans in answers:
             ans_list = list(map(str.strip, ans.split("\n\n")))
             
@@ -32,7 +32,10 @@ def process_reward_score(prompts_and_answers, llm, candidate_tokens):
                     text = step
                 current_conversation.append({"content": text, "role": "user"})
                 current_conversation.append({"content": "+", "role": "assistant"})
-            all_conversations.append(current_conversation)
+                # Add all step conversations for this answer
+                all_conversations.append(deepcopy(current_conversation))
+            problem_lengths.append(len(ans_list))
+        answer_lengths.append(problem_lengths)
 
     # Run inference using vLLM in batch
     sampling_params = SamplingParams(
@@ -45,22 +48,31 @@ def process_reward_score(prompts_and_answers, llm, candidate_tokens):
     # Process results
     current_idx = 0
     all_step_scores = []
-    
-    # Process each problem
-    for i in range(len(prompts_and_answers)):
+
+    for problem_lengths in answer_lengths:
         problem_scores = []
-        answer_outputs = all_outputs[current_idx:current_idx + answers_per_problem]
-        for output in answer_outputs:
-            print("Output: ", output.outputs[0].text)
-            if not output.outputs[0].logprobs:
-                score = -float('inf')
-            else:
+        
+        # Process each answer in the problem
+        for length in problem_lengths:
+            answer_outputs = all_outputs[current_idx:current_idx + length]
+            single_step_scores = []
+            
+            # Process each step in the answer
+            for output in answer_outputs:
                 logprobs = output.outputs[0].logprobs[0]
+                if not isinstance(logprobs, dict):
+                    print(f"Warning: logprobs is not a dict: {type(logprobs)}")
+                    continue
+
                 token_probs = torch.tensor([logprobs.get(token, float('-inf')).logprob for token in candidate_tokens])
                 score = token_probs.softmax(dim=-1)[0].item()
-            problem_scores.append(score)
+                single_step_scores.append(score)
+            
+            problem_scores.append(single_step_scores)
+            current_idx += length
+        
         all_step_scores.append(problem_scores)
-        current_idx += answers_per_problem
+    
     return all_step_scores
 
 import json
@@ -92,13 +104,25 @@ def process_and_select_answers(json_file_path, llm, tokenizer, candidate_tokens)
     # Process results
     results = {}
     for problem_id, answers, step_scores in zip(problem_ids, answers_list, all_step_scores):
+        # Add debug print
+        # print(f"Processing problem {problem_id}")
+        # print(f"Step scores length: {len(step_scores)}")
         
         # Handle empty step_scores
         if not step_scores:
             print(f"Warning: No scores available for problem {problem_id}")
             continue
+
+        average_scores = [sum(score_list)/len(score_list) if score_list else -float('inf') for score_list in step_scores]
             
-        best_answer_idx = int(np.argmax(step_scores))
+        # last_scores = [score_list[-1] if score_list else -float('inf') for score_list in step_scores]
+        
+        # Check if last_scores is empty
+        # if not last_scores:
+        #     print(f"Warning: No valid last scores for problem {problem_id}")
+        #     continue
+            
+        best_answer_idx = int(np.argmax(average_scores))
 
         # print(f"Best score: {step_scores[best_answer_idx]}")
 
@@ -111,7 +135,7 @@ def process_and_select_answers(json_file_path, llm, tokenizer, candidate_tokens)
             'selected_answer_index': best_answer_idx,
             'selected_answer': selected_answer.get('content', ''),
             'is_correct': is_correct,
-            'scores': step_scores[best_answer_idx],
+            'scores': average_scores[best_answer_idx],
             'all_scores': step_scores
         }
     
@@ -154,4 +178,4 @@ if __name__ == "__main__":
     candidate_tokens = [plus_tag_id,minus_tag_id]
     # print(candidate_tokens)
 
-    process_and_select_answers(args.json_file, model, candidate_tokens)
+    process_and_select_answers(args.json_file, model, tokenizer, candidate_tokens)
