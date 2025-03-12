@@ -252,15 +252,34 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     custom_chat_template = f.read()
             else:
                 custom_chat_template = None
-            responses = llm.chat(
-                messages=conversations,
-                sampling_params=sampling_params,
-                use_tqdm=True,
-                continue_final_message=args.continue_final_message,
-                add_generation_prompt=not args.continue_final_message,
-                chat_template=custom_chat_template,
-            )
-            responses = [Response.from_vllm_response(response) for response in responses]
+            # Modify sampling params to generate one response at a time
+            sampling_params.n = 1
+            responses = []
+            
+            # Use tqdm for the outer loop to show progress across all samples
+            total_samples = len(conversations) * args.n
+            with tqdm(total=total_samples, desc="Generating responses") as pbar:
+                for _ in range(args.n):
+                    batch_responses = llm.chat(
+                        messages=conversations,
+                        sampling_params=sampling_params,
+                        use_tqdm=False,  # Disable inner tqdm since we have outer progress bar
+                        continue_final_message=args.continue_final_message,
+                        add_generation_prompt=not args.continue_final_message,
+                        chat_template=custom_chat_template,
+                    )
+                    
+                    # For first iteration, initialize the responses list
+                    if not responses:
+                        responses = [Response.from_vllm_response(resp) for resp in batch_responses]
+                    # For subsequent iterations, append the new responses
+                    else:
+                        for i, new_resp in enumerate(batch_responses):
+                            vllm_resp = Response.from_vllm_response(new_resp)
+                            responses[i].response.append(vllm_resp.response[0])
+                            responses[i].num_completion_tokens.append(vllm_resp.num_completion_tokens[0])
+                    
+                    pbar.update(len(conversations))
 
             if args.budget_force:
                 continuations_needed = []
