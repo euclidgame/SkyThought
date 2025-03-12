@@ -175,24 +175,22 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             # Configure the API endpoint for the vLLM server
             api_base_url = f"http://localhost:{port}/v1"
             
-            def query_vllm_server(conversation):
+            def query_vllm_server(task):
                 """Function to send a request to vLLM server and handle potential errors."""
+                conversation, conv_idx, sample_idx = task
                 headers = {"Content-Type": "application/json"}
                 
-                # Standard OpenAI API parameters
                 payload = {
                     "model": args.model,
                     "messages": conversation,
                     "temperature": temp,
                     "max_tokens": max_tokens,
-                    "n": args.n,
+                    "n": 1,  # Always request one response
                     "top_p": args.top_p,
-                    # Include custom parameters in the main payload
                     "continue_final_message": args.continue_final_message,
                     "add_generation_prompt": not args.continue_final_message
                 }
                 
-                # If using chat_template, add it to the payload
                 if args.chat_template:
                     with open(args.chat_template, "r") as f:
                         payload["chat_template"] = f.read()
@@ -205,46 +203,49 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                         timeout=1000000
                     )
                     response.raise_for_status()
-                    return response.json()
+                    return response.json(), conv_idx, sample_idx
                 except requests.exceptions.RequestException as e:
                     print(f"Request error: {e}")
                     time.sleep(5)
-                    return query_vllm_server(conversation)  # Recursive retry
-            
-            # Use ThreadPoolExecutor for better I/O-bound performance
+                    return query_vllm_server((conversation, conv_idx, sample_idx))
+
+            # Prepare all tasks
+            all_tasks = []
+            for conv_idx, conversation in enumerate(conversations):
+                for sample_idx in range(args.n):
+                    all_tasks.append((conversation, conv_idx, sample_idx))
+
+            # Initialize storage for responses
+            responses = [{"responses": [], "completion_tokens": [], "prompt_tokens": None} 
+                        for _ in range(len(conversations))]
+
+            # Process all tasks in parallel
             with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-                responses_json = list(tqdm(
-                    executor.map(query_vllm_server, conversations), 
-                    total=len(conversations),
-                    desc="Processing online inference"
+                futures = list(tqdm(
+                    executor.map(query_vllm_server, all_tasks),
+                    total=len(all_tasks),
+                    desc="Processing all requests"
                 ))
-            
-            # Create Response objects following the structure expected by from_openai_response
-            
-            responses = []
-            for response_dict in responses_json:
-                # Option 1: If Response class has a from_dict method
-                if hasattr(Response, 'from_dict'):
-                    responses.append(Response.from_dict(response_dict))
-                # Option 2: If we need to modify the dictionary to match expected format
-                else:
-                    # Extract the relevant information from the dictionary
-                    # This assumes a structure similar to OpenAI API responses
-                    choices = response_dict.get('choices', [])
-                    completion_tokens = response_dict.get('usage', {}).get('completion_tokens', 0)
-                    prompt_tokens = response_dict.get('usage', {}).get('prompt_tokens', 0)
-                    
-                    # Create a Response object directly
-                    response_obj = Response(
-                        response=[choice.get('message', {}).get('content', '') for choice in choices],
-                        num_completion_tokens=[
-                            completion_tokens if i == 0 else 0
-                            for i in range(len(choices))
-                        ],
-                        num_input_tokens=prompt_tokens
-                    )
-                    
-                    responses.append(response_obj)
+
+            # Process results
+            for response_dict, conv_idx, sample_idx in futures:
+                response_content = response_dict['choices'][0]['message']['content']
+                completion_tokens = response_dict['usage']['completion_tokens']
+                prompt_tokens = response_dict['usage']['prompt_tokens']
+                
+                responses[conv_idx]["responses"].append(response_content)
+                responses[conv_idx]["completion_tokens"].append(completion_tokens)
+                responses[conv_idx]["prompt_tokens"] = prompt_tokens
+
+            # Convert to Response objects
+            responses = [
+                Response(
+                    response=r["responses"],
+                    num_completion_tokens=r["completion_tokens"],
+                    num_input_tokens=r["prompt_tokens"]
+                )
+                for r in responses
+            ]
         else:
             if args.chat_template:
                 with open(args.chat_template, "r") as f:
