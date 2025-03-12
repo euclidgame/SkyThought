@@ -9,8 +9,14 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
 from typing import Dict, Tuple
 
+import time
+import requests
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 import ray
+
+from colorama import Fore, Style, init
 
 from skythought_evals.tasks.gpqa_diamond.gpqa_diamond_handler import GPQADiamondTaskHandler
 
@@ -51,7 +57,7 @@ from skythought_evals.tasks.apps.apps_handler import APPSTaskHandler
 from skythought_evals.tasks.taco.taco_handler import TACOTaskHandler
 
 from sglang.test.test_utils import is_in_ci
-from sglang.utils import wait_for_server, print_highlight, terminate_process
+from sglang.utils import wait_for_server, print_highlight, terminate_process, launch_server_cmd
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
@@ -167,10 +173,6 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             max_tokens=max_tokens, temperature=temp, n=args.n, top_p=args.top_p
         )
         if args.online_inference:
-            import time
-            import requests
-            from concurrent.futures import ThreadPoolExecutor
-            from tqdm import tqdm
 
             # Configure the API endpoint for the vLLM server
             api_base_url = f"http://localhost:{port}/v1"
@@ -525,7 +527,6 @@ def perform_inference_and_check(
         "accuracy": temperature_to_acc,
     }
 
-    from colorama import Fore, Style, init
     init()  # Initialize colorama
     
     print(f"\n{Fore.CYAN}===== Evaluation Metrics ====={Style.RESET_ALL}")
@@ -1003,10 +1004,6 @@ def main():
             llm = None
         elif args.online_inference:
             llm = None
-            if is_in_ci():
-                from patch import launch_server_cmd
-            else:
-                from sglang.utils import launch_server_cmd
 
             # This is equivalent to running the following command in your terminal
 
