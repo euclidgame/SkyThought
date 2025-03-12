@@ -220,7 +220,6 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                 ))
             
             # Create Response objects following the structure expected by from_openai_response
-            from skythought.skythought_evals.util.response import Response
             
             responses = []
             for response_dict in responses_json:
