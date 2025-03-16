@@ -55,7 +55,7 @@ def parse_arguments():
         "--prompt_style",
         type=str,
         default="normal",
-        choices=["thinking_r1", "no_thinking_r1", "normal"],
+        choices=["thinking_r1", "no_thinking_r1", "normal", "no_thinking_r1_2", "no_thinking_r1_3"],
         help="Prompt style for the model.",
     )
     parser.add_argument(
