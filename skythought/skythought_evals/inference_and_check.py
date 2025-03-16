@@ -382,14 +382,14 @@ def perform_inference_and_check(
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
-    if args.prompt_style == "no_thinking_r1" or args.prompt_style == "no_thinking_r1_2" or args.prompt_style == "no_thinking_r1_3":
+    if args.prompt_style in ["no_thinking_r1", "no_thinking_r1_2", "no_thinking_r1_3", "no_thinking_r1_4"]:
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
                     {
                         "role": "assistant",
                         # "content": "<|im_start|>think\nOkay I have finished thinking about the problem.\n<|im_start|>answer\nAnswer:",
-                        "content": "<think>\nOkay I have finished thinking.\n</think>\nLet's solve the problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay I have finished thinking.\n</think>\n" if args.prompt_style == "no_thinking_r1_2" else "<think>\nOkay I have finished thinking.\n</think>\nHere is the final solution to the problem.",
+                        "content": "<think>\nOkay I have finished thinking.\n</think>\nLet's solve the problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay I have finished thinking.\n</think>\n" if args.prompt_style == "no_thinking_r1_2" else "<think>\nOkay I have finished thinking.\n</think>\nHere is the final solution to the problem." if args.prompt_style == "no_thinking_r1_3" else "<think>\nOkay I have finished thinking.\n</think>\n**Final Answer:**",
                     }
                 )
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
@@ -892,7 +892,7 @@ def main():
         "--prompt_style",
         type=str,
         default="thinking_r1",
-        choices=["thinking_r1", "no_thinking_r1", "normal", "no_thinking_r1_2", "no_thinking_r1_3"],
+        choices=["thinking_r1", "no_thinking_r1", "normal", "no_thinking_r1_2", "no_thinking_r1_3", "no_thinking_r1_4"],
         help="Prompt style for the model.",
     )
     parser.add_argument(
