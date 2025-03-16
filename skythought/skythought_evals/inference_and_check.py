@@ -292,6 +292,8 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                         if response.num_completion_tokens[i] == args.max_tokens:
                             # Add or modify conversation with prompt for continuation
                             conv = copy.deepcopy(conversations[response_idx])
+                            if args.prompt_style == "thinking_r1":
+                                response.response[i] += "\n</think>"
                             response.response[i] += '\n\nFinal Answer: the final answer is'
                             if conv[-1]['role'] == 'assistant':
                                 conv[-1]['content'] += response.response[i]
