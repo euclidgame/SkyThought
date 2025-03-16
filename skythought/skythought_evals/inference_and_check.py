@@ -382,14 +382,14 @@ def perform_inference_and_check(
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
-    if args.prompt_style == "no_thinking_r1":
+    if args.prompt_style == "no_thinking_r1" or args.prompt_style == "no_thinking_r1_2" or args.prompt_style == "no_thinking_r1_3":
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
                     {
                         "role": "assistant",
                         # "content": "<|im_start|>think\nOkay I have finished thinking about the problem.\n<|im_start|>answer\nAnswer:",
-                        "content": "<think>\nOkay I have finished thinking.\n</think>\nLet's solve the problem.",
+                        "content": "<think>\nOkay I have finished thinking.\n</think>\nLet's solve the problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay I have finished thinking.\n</think>\n" if args.prompt_style == "no_thinking_r1_2" else "<think>\nOkay I have finished thinking.\n</think>\nHere is the solution to the problem.",
                     }
                 )
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
