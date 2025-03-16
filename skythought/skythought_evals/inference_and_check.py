@@ -59,6 +59,8 @@ from skythought_evals.tasks.taco.taco_handler import TACOTaskHandler
 from sglang.test.test_utils import is_in_ci
 from sglang.utils import wait_for_server, print_highlight, terminate_process, launch_server_cmd
 
+import logging
+
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
 
@@ -260,6 +262,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             
             # Use tqdm for the outer loop to show progress across all samples
             total_samples = len(conversations) * args.n
+            logging.info(f"Starting normal inference for {total_samples} responses...")
             with tqdm(total=total_samples, desc="Generating responses") as pbar:
                 for _ in range(args.n):
                     batch_responses = llm.chat(
@@ -282,7 +285,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                             responses[i].num_completion_tokens.append(vllm_resp.num_completion_tokens[0])
                     
                     pbar.update(len(conversations))
-
+            logging.info(f"Normal inference completed for {total_samples} responses.")
             if args.budget_force:
                 continuations_needed = []
                 modified_conversations = []
@@ -307,6 +310,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                             continuations_needed.append((response_idx, i))
                             modified_conversations.append(conv)
                 
+                logging.info(f"Starting budget force inference for {len(continuations_needed)} responses...")
                 # Only make one batch call if continuations are needed
                 if continuations_needed:
                     sampling_params.n = 1
@@ -325,7 +329,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     for idx, (response_idx, i) in enumerate(continuations_needed):
                         responses[response_idx].response[i] += new_responses[idx].response[0]
                         responses[response_idx].num_completion_tokens[i] += new_responses[idx].num_completion_tokens[0]
-
+                    logging.info(f"Budget force inference completed for {len(continuations_needed)} responses.")
     return responses
 
 
@@ -411,6 +415,8 @@ def perform_inference_and_check(
         total_correct = 0
         total_finish = 0
         temperature_to_scores[temp] = {}
+
+        logging.info(f"Starting correctness check for {len(responses)} responses...")
         with ProcessPoolExecutor(max_workers=32) as executor:
             future_to_task = {}
             token_usages = {}
@@ -432,6 +438,7 @@ def perform_inference_and_check(
                         )
                     ] = (idx, sample_idx)
 
+            logging.info(f"Launching correctness check for {len(future_to_task)} responses...")
             for future in tqdm(
                 as_completed(future_to_task),
                 total=len(future_to_task),
