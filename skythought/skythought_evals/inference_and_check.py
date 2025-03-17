@@ -769,6 +769,7 @@ def perform_inference_and_save(
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(
         description="Unified inference and checking for different datasets/tasks."
     )
