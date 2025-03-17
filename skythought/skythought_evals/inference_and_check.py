@@ -451,8 +451,7 @@ def perform_inference_and_check(
                 total=len(future_to_task),
                 desc="Processing Generations",
                 mininterval=0.1,  # Update more frequently
-                ncols=80,         # Fixed width
-                flush=True        # Force flush output
+                ncols=80         # Fixed width
             ):
                 try:
                     idx, sample_idx = future_to_task[future]
