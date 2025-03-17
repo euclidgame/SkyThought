@@ -418,36 +418,52 @@ def perform_inference_and_check(
 
         logging.info(f"Starting correctness check for {len(responses)} responses...")
         with ProcessPoolExecutor(max_workers=32) as executor:
+            logging.info("ProcessPoolExecutor initialized")
             future_to_task = {}
             token_usages = {}
-            for idx, response in enumerate(responses):
-                for sample_idx in range(args.n):
-                    # response_entry at this point doesn't contain correctness check.
-                    response_entry, token_usage_for_response = _parse_response_for_idx(
-                        response, sample_idx, args
-                    )
-                    if idx not in token_usages:
-                        token_usages[idx] = []
-                    token_usages[idx].append(token_usage_for_response)
-                    # submit correctness check for response
-                    future_to_task[
-                        executor.submit(
-                            handler.update_results,
-                            remaining_data[idx],
-                            response_entry.content,
+            
+            # Reduce number of workers for testing
+            test_workers = 4
+            logging.warning(f"Testing with reduced workers: {test_workers}")
+            
+            with ProcessPoolExecutor(max_workers=test_workers) as executor:
+                for idx, response in enumerate(responses):
+                    for sample_idx in range(args.n):
+                        # response_entry at this point doesn't contain correctness check.
+                        response_entry, token_usage_for_response = _parse_response_for_idx(
+                            response, sample_idx, args
                         )
-                    ] = (idx, sample_idx)
+                        if idx not in token_usages:
+                            token_usages[idx] = []
+                        token_usages[idx].append(token_usage_for_response)
+                        # submit correctness check for response
+                        future_to_task[
+                            executor.submit(
+                                handler.update_results,
+                                remaining_data[idx],
+                                response_entry.content,
+                            )
+                        ] = (idx, sample_idx)
 
             logging.info(f"Launching correctness check for {len(future_to_task)} responses...")
             for future in tqdm(
                 as_completed(future_to_task),
                 total=len(future_to_task),
                 desc="Processing Generations",
+                mininterval=0.1,  # Update more frequently
+                ncols=80,         # Fixed width
+                flush=True        # Force flush output
             ):
-                idx, sample_idx = future_to_task[future]
-                # TODO (sumanthrh): the returned entry is currently a dict and can be confusing.
-                # this should also be a ParsedResponse object.
-                response_entry: dict = future.result()
+                try:
+                    idx, sample_idx = future_to_task[future]
+                    response_entry: dict = future.result(timeout=300)  # 5 minute timeout
+                    logging.info(f"Task {idx} completed successfully")
+                except TimeoutError:
+                    logging.error(f"Task timed out")
+                    continue
+                except Exception as e:
+                    logging.error(f"Task failed with error: {e}")
+                    continue
                 total_correct += response_entry["correctness"]
                 total_finish += 1
 
