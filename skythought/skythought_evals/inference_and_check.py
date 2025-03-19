@@ -437,13 +437,22 @@ def perform_inference_and_check(
                             token_usages[idx] = []
                         token_usages[idx].append(token_usage_for_response)
                         # submit correctness check for response
-                        future_to_task[
-                            executor.submit(
-                                handler.update_results,
-                                remaining_data[idx],
-                                response_entry.content,
-                            )
-                        ] = (idx, sample_idx)
+                        if args.inference:
+                            future_to_task[
+                                executor.submit(
+                                    lambda data, content: {"content": content, "correctness": False, "reason": "Results saved without evaluation"},
+                                    remaining_data[idx],
+                                    response_entry.content,
+                                )
+                            ] = (idx, sample_idx)
+                        else:
+                            future_to_task[
+                                executor.submit(
+                                    handler.update_results,
+                                    remaining_data[idx],
+                                    response_entry.content,
+                                )
+                            ] = (idx, sample_idx)
 
             logging.info(f"Launching correctness check for {len(future_to_task)} responses...")
             for future in tqdm(
@@ -1054,14 +1063,9 @@ def main():
                     enforce_eager=True, enable_prefix_caching=True,
                 )
             )
-        if args.inference:
-            perform_inference_and_save(
-                handler, temperatures, max_tokens, result_file, llm, model_config, args
-            )
-        else:
-            perform_inference_and_check(
-                handler, temperatures, max_tokens, result_file, llm, model_config, port, args
-            )
+        perform_inference_and_check(
+            handler, temperatures, max_tokens, result_file, llm, model_config, port, args
+        )
         if args.online_inference:
             terminate_process(server_process)
 
