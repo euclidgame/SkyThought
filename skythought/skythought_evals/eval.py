@@ -94,6 +94,9 @@ def parse_arguments():
     parser.add_argument(
         "--max-workers", type=int, default=16, help="Max workers for the model."
     )
+    parser.add_argument(
+        "--inference", action="store_true", help="Use inference mode."
+    )
     return parser.parse_args()
 
 
@@ -168,6 +171,8 @@ def main():
                 args.result_dir,
             ]
         )
+        if args.inference:
+            command.append("--inference")
         if args.budget_force:
             command.append("--budget_force")
         if args.online_inference:
