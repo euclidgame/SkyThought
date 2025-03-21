@@ -417,8 +417,17 @@ def perform_inference_and_check(
         total_finish = 0
         temperature_to_scores[temp] = {}
 
+        to_dump_responses = []
+        for response in responses:
+            to_dump_responses.append({
+                "input_conversation": conversations[response.index],
+                "response": response.response,
+                "num_completion_tokens": response.num_completion_tokens,
+                "num_input_tokens": response.num_input_tokens
+            })
+
         with open(os.path.join(result_dir, "responses.json"), "w") as f:
-            json.dump(responses, f, indent=4)
+            json.dump(to_dump_responses, f, indent=4)
 
         logging.info(f"Starting correctness check...")
         with ProcessPoolExecutor(max_workers=32) as executor:
