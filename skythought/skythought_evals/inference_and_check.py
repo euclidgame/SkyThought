@@ -428,6 +428,9 @@ def perform_inference_and_check(
 
         with open(os.path.join(result_dir, "responses.json"), "w") as f:
             json.dump(to_dump_responses, f, indent=4)
+        
+        if args.inference:
+            return
 
         logging.info(f"Starting correctness check...")
         with ProcessPoolExecutor(max_workers=32) as executor:
