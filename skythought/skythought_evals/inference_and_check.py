@@ -418,9 +418,9 @@ def perform_inference_and_check(
         temperature_to_scores[temp] = {}
 
         to_dump_responses = []
-        for response in responses:
+        for index, response in enumerate(responses):
             to_dump_responses.append({
-                "input_conversation": conversations[response.index],
+                "input_conversation": conversations[index],
                 "response": response.response,
                 "num_completion_tokens": response.num_completion_tokens,
                 "num_input_tokens": response.num_input_tokens
