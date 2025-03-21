@@ -351,6 +351,7 @@ def perform_inference_and_check(
     port,
     args,
 ):
+    result_dir, result_name = os.path.split(result_file)
     results = load_existing_results(result_file)
     print(f"Loaded {len(results)} existing results.")
     train_data = handler.load_and_filter_dataset(
@@ -416,43 +417,32 @@ def perform_inference_and_check(
         total_finish = 0
         temperature_to_scores[temp] = {}
 
-        logging.info(f"Starting correctness check for {len(responses)} responses...")
+        with open(os.path.join(result_dir, "responses.json"), "w") as f:
+            json.dump(responses, f, indent=4)
+
+        logging.info(f"Starting correctness check...")
         with ProcessPoolExecutor(max_workers=32) as executor:
             logging.info("ProcessPoolExecutor initialized")
             future_to_task = {}
             token_usages = {}
             
-            # Reduce number of workers for testing
-            test_workers = 4
-            logging.warning(f"Testing with reduced workers: {test_workers}")
-            
-            with ProcessPoolExecutor(max_workers=test_workers) as executor:
-                for idx, response in enumerate(responses):
-                    for sample_idx in range(args.n):
-                        # response_entry at this point doesn't contain correctness check.
-                        response_entry, token_usage_for_response = _parse_response_for_idx(
-                            response, sample_idx, args
+            for idx, response in enumerate(responses):
+                for sample_idx in range(args.n):
+                    # response_entry at this point doesn't contain correctness check.
+                    response_entry, token_usage_for_response = _parse_response_for_idx(
+                        response, sample_idx, args
+                    )
+                    if idx not in token_usages:
+                        token_usages[idx] = []
+                    token_usages[idx].append(token_usage_for_response)
+                    # submit correctness check for response
+                    future_to_task[
+                        executor.submit(
+                            handler.update_results,
+                            remaining_data[idx],
+                            response_entry.content,
                         )
-                        if idx not in token_usages:
-                            token_usages[idx] = []
-                        token_usages[idx].append(token_usage_for_response)
-                        # submit correctness check for response
-                        if args.inference:
-                            future_to_task[
-                                executor.submit(
-                                    lambda data, content: {"content": content, "correctness": False, "reason": "Results saved without evaluation"},
-                                    remaining_data[idx],
-                                    response_entry.content,
-                                )
-                            ] = (idx, sample_idx)
-                        else:
-                            future_to_task[
-                                executor.submit(
-                                    handler.update_results,
-                                    remaining_data[idx],
-                                    response_entry.content,
-                                )
-                            ] = (idx, sample_idx)
+                    ] = (idx, sample_idx)
 
             logging.info(f"Launching correctness check for {len(future_to_task)} responses...")
             for future in tqdm(
@@ -535,7 +525,6 @@ def perform_inference_and_check(
     num_responses_total = len(responses) * args.n * len(temperatures)
 
     # Token usage summary
-    result_dir, result_name = os.path.split(result_file)
     metrics_dir = os.path.join(result_dir, "metrics")
     os.makedirs(metrics_dir, exist_ok=True)
 
