@@ -402,7 +402,7 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>\nOkay, I have finished thinking.\n</think>\n```python\n",
+                        "content": "<think>\nOkay, I have finished thinking.\n</think>\n```python\n" if args.prompt_style == "no_thinking_r1" else "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem.",
                     }
                 )
 
