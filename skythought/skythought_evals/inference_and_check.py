@@ -478,7 +478,6 @@ def perform_inference_and_check(
                 try:
                     idx, sample_idx = future_to_task[future]
                     response_entry: dict = future.result(timeout=300)  # 5 minute timeout
-                    logging.info(f"Task {idx} completed successfully")
                 except TimeoutError:
                     logging.error(f"Task timed out")
                     continue
