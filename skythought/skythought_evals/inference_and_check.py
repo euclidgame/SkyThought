@@ -317,7 +317,8 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                 # Only make one batch call if continuations are needed
                 if continuations_needed:
                     sampling_params.n = 1
-                    sampling_params.max_tokens = 50
+                    if args.task != "livecodebench":
+                        sampling_params.max_tokens = 50
                     new_responses = llm.chat(
                         messages=modified_conversations,
                         sampling_params=sampling_params,
