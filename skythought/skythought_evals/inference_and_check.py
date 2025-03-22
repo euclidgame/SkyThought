@@ -297,7 +297,10 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                             conv = copy.deepcopy(conversations[response_idx])
                             if args.prompt_style == "thinking_r1":
                                 response.response[i] += "\n</think>"
-                            response.response[i] += '\n\nFinal Answer: the final answer is'
+                            if args.task == "livecodebench":
+                                response.response[i] += '\n\nThe final code is \n```python\n'
+                            else:
+                                response.response[i] += '\n\nFinal Answer: the final answer is'
                             if conv[-1]['role'] == 'assistant':
                                 conv[-1]['content'] += response.response[i]
                             else:
@@ -402,7 +405,7 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>\nOkay, I have finished thinking.\n</think>\n```python\n" if args.prompt_style == "no_thinking_r1" else "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem.",
+                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem.",
                     }
                 )
 
