@@ -319,15 +319,22 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     sampling_params.n = 1
                     if args.task != "livecodebench":
                         sampling_params.max_tokens = 50
-                    new_responses = llm.chat(
-                        messages=modified_conversations,
-                        sampling_params=sampling_params,
-                        use_tqdm=True,
-                        continue_final_message=True,
-                        add_generation_prompt=False,
-                        chat_template=custom_chat_template,
-                    )
-                    new_responses = [Response.from_vllm_response(response) for response in new_responses]
+
+                    new_responses = []
+
+                    batch_size = 500
+                    for i in range(0, len(modified_conversations), batch_size):
+                        logging.info(f"Processing batch {i//batch_size+1} during budget force inference...")
+                        batch_conversations = modified_conversations[i:i+batch_size]
+                        continued_responses = llm.chat(
+                            messages=batch_conversations,
+                            sampling_params=sampling_params,
+                            use_tqdm=True,
+                            continue_final_message=True,
+                            add_generation_prompt=False,
+                            chat_template=custom_chat_template,
+                        )
+                        new_responses.extend([Response.from_vllm_response(response) for response in continued_responses])
                     
                     # Update original responses with continuations
                     for idx, (response_idx, i) in enumerate(continuations_needed):
