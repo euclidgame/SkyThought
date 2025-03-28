@@ -336,6 +336,9 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                             add_generation_prompt=False,
                             chat_template=custom_chat_template,
                         )
+                        for response in continued_responses:
+                            for output in response.outputs:
+                                output.text += "```"
                         new_responses.extend([Response.from_vllm_response(response) for response in continued_responses])
                     
                     # Update original responses with continuations
@@ -415,7 +418,7 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay, I have finished thinking.\n</think>\nThe task is to" ,
+                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay, I have finished thinking.\n</think>\nThe task is to" if args.prompt_style == "no_thinking_r1_2" else "<think>\nOkay, I have finished thinking.\n</think>\nTo solve the problem, we need to determine" if args.prompt_style == "no_thinking_r1_3" else "<think>\nOkay, I have finished thinking.\n</think>\n**Final Answer:**",
                     }
                 )
 
