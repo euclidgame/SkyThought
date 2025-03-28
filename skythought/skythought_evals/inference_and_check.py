@@ -388,7 +388,7 @@ def perform_inference_and_check(
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nPlease write the answer for this math problem directly without any thinking process."
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
-            model_config.user_template = "{}\nPlease solve the above problem without the thinking process and return the python code directly."
+            model_config.user_template = "{}\nPlease solve the above problem without the thinking process."
     elif args.prompt_style.startswith("thinking"):
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nYou should carefully think about the problem and reason step by step."
@@ -413,7 +413,7 @@ def perform_inference_and_check(
                 conv.append(
                     {
                         "role": "assistant",
-                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem.",
+                        "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay, I have finished thinking.\n</think>\nThe task is to" ,
                     }
                 )
 
