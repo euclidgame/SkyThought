@@ -319,6 +319,8 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     sampling_params.n = 1
                     if args.task != "livecodebench":
                         sampling_params.max_tokens = 50
+                    else:
+                        sampling_params.stop = "```"
 
                     new_responses = []
 
