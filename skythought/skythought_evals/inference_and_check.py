@@ -442,7 +442,7 @@ def perform_inference_and_check(
                 "num_input_tokens": response.num_input_tokens
             })
 
-        with open(os.path.join(result_dir, "responses.json"), "w") as f:
+        with open(os.path.join(result_dir, f"{model_config.name}_responses.json"), "w") as f:
             json.dump(to_dump_responses, f, indent=4)
         
         if args.inference:
