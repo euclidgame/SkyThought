@@ -97,6 +97,12 @@ def parse_arguments():
     parser.add_argument(
         "--inference", action="store_true", help="Use inference mode."
     )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=600,
+        help="Batch size for the model.",
+    )
     return parser.parse_args()
 
 
@@ -160,6 +166,8 @@ def main():
             str(args.max_tokens),
             "--max-workers",
             str(args.max_workers),
+            "--batch_size",
+            str(args.batch_size),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments

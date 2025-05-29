@@ -256,24 +256,33 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     custom_chat_template = f.read()
             else:
                 custom_chat_template = None
+            # Modify sampling params to generate one response at a time
+            responses = []
             
-            # Generate all n samples at once
-            sampling_params.n = args.n
+            # Use tqdm for the outer loop to show progress across all samples
             total_samples = len(conversations) * args.n
+            batch_size = math.floor(args.batch_size / args.n)
             logging.info(f"Starting normal inference for {total_samples} responses...")
-            
-            batch_responses = llm.chat(
-                messages=conversations,
-                sampling_params=sampling_params,
-                use_tqdm=True,
-                continue_final_message=args.continue_final_message,
-                add_generation_prompt=not args.continue_final_message,
-                chat_template=custom_chat_template,
-            )
-            
-            # Convert to Response objects with multiple samples per conversation
-            responses = [Response.from_vllm_response(resp) for resp in batch_responses]
-            
+            with tqdm(total=len(conversations), desc="Generating responses") as pbar:
+                for i in range(0, len(conversations), batch_size):
+                    batch_conversations = conversations[i:i+batch_size]
+                    batch_responses = llm.chat(
+                        messages=batch_conversations,
+                        sampling_params=sampling_params,
+                        use_tqdm=True,  # Disable inner tqdm since we have outer progress bar
+                        continue_final_message=args.continue_final_message,
+                        add_generation_prompt=not args.continue_final_message,
+                        chat_template=custom_chat_template,
+                    )
+                    
+                    # For first iteration, initialize the responses list
+                    if not responses:
+                        responses = [Response.from_vllm_response(resp) for resp in batch_responses]
+                    # For subsequent iterations, append the new responses
+                    else:
+                        responses.extend([Response.from_vllm_response(resp) for resp in batch_responses])
+                    
+                    pbar.update(batch_size)
             logging.info(f"Normal inference completed for {total_samples} responses.")
             if args.budget_force:
                 continuations_needed = []
@@ -947,6 +956,12 @@ def main():
         "--budget_force",
         action="store_true",
         help="Force the budget of the model.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=600,
+        help="Batch size for the model.",
     )
 
     args = parser.parse_args()
