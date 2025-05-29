@@ -122,7 +122,9 @@ class LiveCodeBenchTaskHandler(TaskHandler):
                 lambda example: example["difficulty"] == difficulty
             )
         p_start_date = datetime.strptime('2025-01-31', "%Y-%m-%d")
-        dataset = [e for e in dataset if p_start_date <= e.contest_date]
+        dataset = dataset.filter(
+            lambda example: p_start_date <= datetime.strptime(example["contest_date"], "%Y-%m-%dT%H:%M:%S")
+        )
         # We use a lower writer_batch_size to avoid pyarrow issues. JSON entries with LiveCodeBench are large.
         # See: https://github.com/NovaSky-AI/SkyThought/pull/45 for details.
         dataset = dataset.map(
