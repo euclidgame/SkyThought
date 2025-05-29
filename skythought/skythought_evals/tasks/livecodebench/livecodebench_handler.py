@@ -121,7 +121,7 @@ class LiveCodeBenchTaskHandler(TaskHandler):
             dataset = dataset.filter(
                 lambda example: example["difficulty"] == difficulty
             )
-        p_start_date = datetime.strptime('2025-01-31', "%Y-%m-%d")
+        p_start_date = datetime.strptime('2025-03-01', "%Y-%m-%d")
         dataset = dataset.filter(
             lambda example: p_start_date <= datetime.strptime(example["contest_date"], "%Y-%m-%dT%H:%M:%S")
         )
