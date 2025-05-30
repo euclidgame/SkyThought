@@ -14,11 +14,10 @@ class MathTaskHandler(TaskHandler):
         return self.task_config.templating_parameters["template"].format(**problem)
 
     def check_correctness(self, problem, generation):
-        return False
-        # answer = strip_answer_string(problem[self.task_config.answer_key])
-        # pred = extract_answer(generation)
-        # pred = strip_answer_string(pred)
-        # return math_equal(pred, answer)
+        answer = strip_answer_string(problem[self.task_config.answer_key])
+        pred = extract_answer(generation)
+        pred = strip_answer_string(pred)
+        return math_equal(pred, answer)
 
     def update_results(self, problem, response):
         if not isinstance(response, str):
