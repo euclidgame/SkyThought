@@ -100,6 +100,7 @@ def fetch_response_openai(llm, model_name, max_tokens, temp, num_responses, prom
     return response
 
 def fetch_response_together_ai(llm, model_name, max_tokens, temp, num_responses, prompt):
+    model_name = model_name.replace("together_ai/", "")
     response = llm.chat.completions.create(
         model=model_name,
         messages=prompt,
