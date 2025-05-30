@@ -101,14 +101,20 @@ def fetch_response_openai(llm, model_name, max_tokens, temp, num_responses, prom
 
 def fetch_response_together_ai(llm, model_name, max_tokens, temp, num_responses, prompt):
     model_name = model_name.replace("together_ai/", "")
-    response = llm.chat.completions.create(
-        model=model_name,
-        messages=prompt,
-        n=num_responses,
-        temperature=temp,
-        max_tokens=max_tokens,
-    )
-    return response
+    while True:
+        try:
+            response = llm.chat.completions.create(
+                model=model_name,
+                messages=prompt,
+                n=num_responses,
+                temperature=temp,
+                max_tokens=max_tokens,
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+            time.sleep(5)
+        else:
+            return response
 
 
 def fetch_responses_ray(conversations, max_tokens, temp, args):
@@ -203,7 +209,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             
             # Collect n responses for this conversation
             for sample_idx in range(args.n):
-                response_idx = conv_idx * args.n + sample_idx
+                response_idx = sample_idx * len(conversations) + conv_idx
                 together_response = responses[response_idx]
                 
                 # Extract data from Together AI response

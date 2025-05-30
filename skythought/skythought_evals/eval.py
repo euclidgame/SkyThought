@@ -97,6 +97,9 @@ def parse_arguments():
     parser.add_argument(
         "--inference", action="store_true", help="Use inference mode."
     )
+    parser.add_argument(
+        "--top_p", type=float, default=0.95, help="Top p for the model."
+    )
     return parser.parse_args()
 
 
@@ -160,6 +163,8 @@ def main():
             str(args.max_tokens),
             "--max-workers",
             str(args.max_workers),
+            "--top_p",
+            str(args.top_p),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments
