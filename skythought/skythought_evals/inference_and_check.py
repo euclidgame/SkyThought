@@ -188,7 +188,11 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             fetch_response_together_ai, llm, args.model, max_tokens, temp, 1
         )
         with concurrent.futures.ThreadPoolExecutor(max_workers=32) as e:
-            responses = list(e.map(fetch_partial, conversations * args.n))
+            responses = list(tqdm(
+                e.map(fetch_partial, conversations * args.n),
+                total=len(conversations) * args.n,
+                desc="Together AI API calls"
+            ))
         
         # Process Together AI responses inline - group n responses per conversation
         grouped_responses = []
