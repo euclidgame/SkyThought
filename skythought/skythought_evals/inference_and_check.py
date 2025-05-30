@@ -61,6 +61,8 @@ from sglang.utils import wait_for_server, print_highlight, terminate_process, la
 
 import logging
 
+from together import Together
+
 module_dir = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_RAY_CONFIG_RELATIVE_PATH = "ray_configs/ray_config.yaml"
 
@@ -95,6 +97,16 @@ def fetch_response_openai(llm, model_name, max_tokens, temp, num_responses, prom
             temperature=temp,
             max_tokens=max_tokens,
         )
+    return response
+
+def fetch_response_together_ai(llm, model_name, max_tokens, temp, num_responses, prompt):
+    response = llm.chat.completions.create(
+        model=model_name,
+        messages=prompt,
+        n=num_responses,
+        temperature=temp,
+        max_tokens=max_tokens,
+    )
     return response
 
 
@@ -170,6 +182,43 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             responses = list(e.map(fetch_partial, conversations))
 
         responses = [Response.from_openai_response(response) for response in responses]
+    elif args.model.startswith("together_ai"):
+        fetch_partial = partial(
+            fetch_response_together_ai, llm, args.model, max_tokens, temp, 1
+        )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as e:
+            responses = list(e.map(fetch_partial, conversations * args.n))
+        
+        # Process Together AI responses inline - group n responses per conversation
+        grouped_responses = []
+        for conv_idx in range(len(conversations)):
+            conv_responses = []
+            conv_completion_tokens = []
+            conv_prompt_tokens = None
+            
+            # Collect n responses for this conversation
+            for sample_idx in range(args.n):
+                response_idx = conv_idx * args.n + sample_idx
+                together_response = responses[response_idx]
+                
+                # Extract data from Together AI response
+                content = together_response.choices[0].message.content
+                completion_tokens = together_response.usage.completion_tokens
+                prompt_tokens = together_response.usage.prompt_tokens
+                
+                conv_responses.append(content)
+                conv_completion_tokens.append(completion_tokens)
+                if conv_prompt_tokens is None:
+                    conv_prompt_tokens = prompt_tokens
+            
+            # Create Response object for this conversation
+            grouped_responses.append(Response(
+                response=conv_responses,
+                num_completion_tokens=conv_completion_tokens,
+                num_input_tokens=conv_prompt_tokens
+            ))
+        
+        responses = grouped_responses
     else:
         sampling_params = SamplingParams(
             max_tokens=max_tokens, temperature=temp, n=args.n, top_p=args.top_p
@@ -390,7 +439,9 @@ def perform_inference_and_check(
     responses = []
 
     if args.prompt_style.startswith("no_thinking"):
-        if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
+        if args.model.startswith("together_ai"):
+            model_config.user_template = "{} /no_think"
+        elif isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nPlease write the answer for this math problem directly without any thinking process."
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process."
@@ -403,7 +454,7 @@ def perform_inference_and_check(
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
-    if args.prompt_style in ["no_thinking_r1", "no_thinking_r1_2", "no_thinking_r1_3", "no_thinking_r1_4"]:
+    if args.prompt_style in ["no_thinking_r1", "no_thinking_r1_2", "no_thinking_r1_3", "no_thinking_r1_4"] and not args.model.startswith("together_ai"):
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
@@ -1071,14 +1122,15 @@ def main():
 
             wait_for_server(f"http://localhost:{port}")
         else:
-            llm = (
-                OpenAI()
-                if args.model.startswith("openai")
-                else LLM(
+            if args.model.startswith("openai"):
+                llm = OpenAI()
+            elif args.model.startswith("together_ai"):
+                llm = Together()
+            else:
+                llm = LLM(
                     model=args.model, tensor_parallel_size=args.tp, dtype=args.dtype, enable_chunked_prefill=False, seed=args.seed, swap_space=0,
                     enforce_eager=True, enable_prefix_caching=True,
                 )
-            )
         perform_inference_and_check(
             handler, temperatures, max_tokens, result_file, llm, model_config, port, args
         )
