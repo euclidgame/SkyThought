@@ -171,10 +171,6 @@ def main():
             str(args.max_workers),
             "--top_p",
             str(args.top_p),
-            "--use_async",
-            str(args.use_async),
-            "--max_concurrent_requests",
-            str(args.max_concurrent_requests),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments
@@ -186,6 +182,11 @@ def main():
                 args.result_dir,
             ]
         )
+        if args.use_async:
+            command.append("--use_async")
+        if args.max_concurrent_requests:
+            command.append("--max_concurrent_requests")
+            command.append(str(args.max_concurrent_requests))
         if args.inference:
             command.append("--inference")
         if args.budget_force:
