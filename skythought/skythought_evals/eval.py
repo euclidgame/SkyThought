@@ -100,6 +100,12 @@ def parse_arguments():
     parser.add_argument(
         "--top_p", type=float, default=0.95, help="Top p for the model."
     )
+    parser.add_argument(
+        "--use_async", action="store_true", help="Use async inference."
+    )
+    parser.add_argument(
+        "--max_concurrent_requests", type=int, default=100, help="Max concurrent requests."
+    )
     return parser.parse_args()
 
 
@@ -165,6 +171,10 @@ def main():
             str(args.max_workers),
             "--top_p",
             str(args.top_p),
+            "--use_async",
+            str(args.use_async),
+            "--max_concurrent_requests",
+            str(args.max_concurrent_requests),
             "--temperatures",
         ]
         command.extend(temperatures)  # Add temperatures as separate arguments

@@ -60,6 +60,10 @@ from sglang.test.test_utils import is_in_ci
 from sglang.utils import wait_for_server, print_highlight, terminate_process, launch_server_cmd
 
 import logging
+import asyncio
+import aiohttp
+from openai import AsyncOpenAI
+from together import AsyncTogether
 
 from together import Together
 
@@ -104,6 +108,7 @@ def fetch_response_openai(llm, model_name, max_tokens, temp, num_responses, prom
                 time.sleep(5)
             else:
                 return response
+
 
 def fetch_response_together_ai(llm, model_name, max_tokens, temp, num_responses, prompt):
     model_name = model_name.replace("together_ai/", "")
@@ -287,6 +292,42 @@ def inference(llm, conversations, max_tokens, temp, port, args):
             # Configure the API endpoint for the vLLM server
             api_base_url = f"http://localhost:{port}/v1"
             
+            async def query_vllm_server_async(session, task, semaphore):
+                """Async function to send a request to vLLM server and handle potential errors."""
+                conversation, conv_idx, sample_idx = task
+                headers = {"Content-Type": "application/json"}
+                
+                payload = {
+                    "model": args.model,
+                    "messages": conversation,
+                    "temperature": temp,
+                    "max_tokens": max_tokens,
+                    "n": 1,  # Always request one response
+                    "top_p": args.top_p,
+                    "continue_final_message": args.continue_final_message,
+                    "add_generation_prompt": not args.continue_final_message
+                }
+                
+                if args.chat_template:
+                    with open(args.chat_template, "r") as f:
+                        payload["chat_template"] = f.read()
+                
+                async with semaphore:
+                    while True:
+                        try:
+                            async with session.post(
+                                f"{api_base_url}/chat/completions", 
+                                headers=headers,
+                                json=payload,
+                                timeout=aiohttp.ClientTimeout(total=1000000)
+                            ) as response:
+                                response.raise_for_status()
+                                result = await response.json()
+                                return result, conv_idx, sample_idx
+                        except Exception as e:
+                            print(f"Request error: {e}")
+                            await asyncio.sleep(5)
+            
             def query_vllm_server(task):
                 """Function to send a request to vLLM server and handle potential errors."""
                 conversation, conv_idx, sample_idx = task
@@ -332,12 +373,39 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                         for _ in range(len(conversations))]
 
             # Process all tasks in parallel
-            with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-                futures = list(tqdm(
-                    executor.map(query_vllm_server, all_tasks),
-                    total=len(all_tasks),
-                    desc="Processing all requests"
-                ))
+            # Check if async is requested and available
+            use_async = getattr(args, 'use_async', False)
+            
+            if use_async:
+                async def run_async_requests():
+                    # Create semaphore to limit concurrent requests
+                    max_concurrent = getattr(args, 'max_concurrent_requests', 100)
+                    semaphore = asyncio.Semaphore(max_concurrent)
+                    
+                    async with aiohttp.ClientSession() as session:
+                        tasks = [
+                            query_vllm_server_async(session, task, semaphore) 
+                            for task in all_tasks
+                        ]
+                        
+                        # Process tasks with progress bar
+                        futures = []
+                        for coro in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Async vLLM requests"):
+                            result = await coro
+                            futures.append(result)
+                        
+                        return futures
+                
+                # Run async requests
+                futures = asyncio.run(run_async_requests())
+            else:
+                # Use ThreadPoolExecutor for sync requests
+                with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+                    futures = list(tqdm(
+                        executor.map(query_vllm_server, all_tasks),
+                        total=len(all_tasks),
+                        desc="Processing all requests"
+                    ))
 
             # Process results
             for response_dict, conv_idx, sample_idx in futures:
@@ -1068,6 +1136,17 @@ def main():
         "--budget_force",
         action="store_true",
         help="Force the budget of the model.",
+    )
+    parser.add_argument(
+        "--use_async",
+        action="store_true",
+        help="Use async requests for higher concurrency (applies to online inference).",
+    )
+    parser.add_argument(
+        "--max_concurrent_requests",
+        type=int,
+        default=100,
+        help="Maximum number of concurrent requests when using async (default: 100).",
     )
 
     args = parser.parse_args()
