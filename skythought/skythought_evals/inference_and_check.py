@@ -90,14 +90,20 @@ def fetch_response_openai(llm, model_name, max_tokens, temp, num_responses, prom
             max_completion_tokens=max_tokens,
         )
     else:
-        response = llm.chat.completions.create(
-            model=model_name,
-            messages=prompt,
-            n=num_responses,
-            temperature=temp,
-            max_tokens=max_tokens,
-        )
-    return response
+        while True:
+            try:
+                response = llm.chat.completions.create(
+                    model=model_name,
+                    messages=prompt,
+                    n=num_responses,
+                    temperature=temp,
+                    max_tokens=max_tokens,
+                )
+            except Exception as e:
+                print(f"Error: {e}")
+                time.sleep(5)
+            else:
+                return response
 
 def fetch_response_together_ai(llm, model_name, max_tokens, temp, num_responses, prompt):
     model_name = model_name.replace("together_ai/", "")
@@ -216,6 +222,48 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                 content = together_response.choices[0].message.content
                 completion_tokens = together_response.usage.completion_tokens
                 prompt_tokens = together_response.usage.prompt_tokens
+                
+                conv_responses.append(content)
+                conv_completion_tokens.append(completion_tokens)
+                if conv_prompt_tokens is None:
+                    conv_prompt_tokens = prompt_tokens
+            
+            # Create Response object for this conversation
+            grouped_responses.append(Response(
+                response=conv_responses,
+                num_completion_tokens=conv_completion_tokens,
+                num_input_tokens=conv_prompt_tokens
+            ))
+        
+        responses = grouped_responses
+    elif args.model.startswith("openrouter"):
+        model_name = args.model.replace("openrouter/", "")
+        fetch_partial = partial(
+            fetch_response_openai, llm, model_name, max_tokens, temp, 1
+        )
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as e:
+            responses = list(tqdm(
+                e.map(fetch_partial, conversations * args.n),
+                total=len(conversations) * args.n,
+                desc="OpenRouter API calls"
+            ))
+        
+        # Process Together AI responses inline - group n responses per conversation
+        grouped_responses = []
+        for conv_idx in range(len(conversations)):
+            conv_responses = []
+            conv_completion_tokens = []
+            conv_prompt_tokens = None
+            
+            # Collect n responses for this conversation
+            for sample_idx in range(args.n):
+                response_idx = sample_idx * len(conversations) + conv_idx
+                openrouter_response = responses[response_idx]
+                
+                # Extract data from Together AI response
+                content = openrouter_response.choices[0].message.content
+                completion_tokens = openrouter_response.usage.completion_tokens
+                prompt_tokens = openrouter_response.usage.prompt_tokens
                 
                 conv_responses.append(content)
                 conv_completion_tokens.append(completion_tokens)
@@ -450,7 +498,7 @@ def perform_inference_and_check(
     responses = []
 
     if args.prompt_style.startswith("no_thinking"):
-        if args.model.startswith("together_ai"):
+        if "Qwen3" in args.model:
             model_config.user_template = "{} /no_think"
         elif isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nPlease write the answer for this math problem directly without any thinking process."
@@ -465,7 +513,7 @@ def perform_inference_and_check(
     conversations = handler.make_conversations(
         remaining_data, model_config.system_prompt, model_config.user_template
     )
-    if args.prompt_style in ["no_thinking_r1", "no_thinking_r1_2", "no_thinking_r1_3", "no_thinking_r1_4"] and not args.model.startswith("together_ai"):
+    if args.prompt_style in ["no_thinking_r1", "no_thinking_r1_2", "no_thinking_r1_3", "no_thinking_r1_4"] and not "Qwen3" in args.model:
         if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             for i, conv in enumerate(conversations):
                 conv.append(
@@ -1126,7 +1174,10 @@ def main():
             --tensor-parallel-size {args.tp} --dtype {args.dtype} \
             --seed {args.seed} \
             --enable-prefix-caching --enforce-eager \
+            --reasoning-parser deepseek_r1 \
             """
+            if args.prompt_style == "thinking_r1":
+                cmd += " --enable-reasoning"
             if args.chat_template:
                 cmd += f" --chat-template {args.chat_template} --host 0.0.0.0"
             server_process, port = launch_server_cmd(cmd)
@@ -1137,6 +1188,11 @@ def main():
                 llm = OpenAI()
             elif args.model.startswith("together_ai"):
                 llm = Together()
+            elif "openrouter" in args.model:
+                llm = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key="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"
+                )
             else:
                 llm = LLM(
                     model=args.model, tensor_parallel_size=args.tp, dtype=args.dtype, enable_chunked_prefill=False, seed=args.seed, swap_space=0,
