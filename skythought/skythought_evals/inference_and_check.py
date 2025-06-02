@@ -304,14 +304,9 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     "max_tokens": max_tokens,
                     "n": 1,  # Always request one response
                     "top_p": args.top_p,
-                    "continue_final_message": args.continue_final_message,
-                    "enable_thinking": False if "no_thinking" in args.prompt_style else True,
-                    "add_generation_prompt": not args.continue_final_message
+                    "enable_thinking": False,
+                    "add_generation_prompt": True
                 }
-                
-                if args.chat_template:
-                    with open(args.chat_template, "r") as f:
-                        payload["chat_template"] = f.read()
                 
                 async with semaphore:
                     while True:
@@ -344,10 +339,6 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     "continue_final_message": args.continue_final_message,
                     "add_generation_prompt": not args.continue_final_message
                 }
-                
-                if args.chat_template:
-                    with open(args.chat_template, "r") as f:
-                        payload["chat_template"] = f.read()
                 
                 try:
                     response = requests.post(
