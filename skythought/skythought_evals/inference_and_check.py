@@ -368,9 +368,14 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                 for sample_idx in range(args.n):
                     all_tasks.append((conversation, conv_idx, sample_idx))
 
-            # Initialize storage for responses
-            responses = [{"responses": [], "completion_tokens": [], "prompt_tokens": None} 
-                        for _ in range(len(conversations))]
+            # Initialize storage for responses - use dict for proper indexing
+            response_storage = {}
+            for conv_idx in range(len(conversations)):
+                response_storage[conv_idx] = {
+                    "responses": [None] * args.n,
+                    "completion_tokens": [None] * args.n,
+                    "prompt_tokens": None
+                }
 
             # Process all tasks in parallel
             # Check if async is requested and available
@@ -407,24 +412,25 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                         desc="Processing all requests"
                     ))
 
-            # Process results
+            # Process results and store them in the correct positions
             for response_dict, conv_idx, sample_idx in futures:
                 response_content = response_dict['choices'][0]['message']['content']
                 completion_tokens = response_dict['usage']['completion_tokens']
                 prompt_tokens = response_dict['usage']['prompt_tokens']
                 
-                responses[conv_idx]["responses"].append(response_content)
-                responses[conv_idx]["completion_tokens"].append(completion_tokens)
-                responses[conv_idx]["prompt_tokens"] = prompt_tokens
+                # Store response in the correct position
+                response_storage[conv_idx]["responses"][sample_idx] = response_content
+                response_storage[conv_idx]["completion_tokens"][sample_idx] = completion_tokens
+                response_storage[conv_idx]["prompt_tokens"] = prompt_tokens
 
             # Convert to Response objects
             responses = [
                 Response(
-                    response=r["responses"],
-                    num_completion_tokens=r["completion_tokens"],
-                    num_input_tokens=r["prompt_tokens"]
+                    response=response_storage[conv_idx]["responses"],
+                    num_completion_tokens=response_storage[conv_idx]["completion_tokens"],
+                    num_input_tokens=response_storage[conv_idx]["prompt_tokens"]
                 )
-                for r in responses
+                for conv_idx in range(len(conversations))
             ]
         else:
             if args.chat_template:
