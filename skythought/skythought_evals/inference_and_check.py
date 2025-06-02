@@ -305,6 +305,7 @@ def inference(llm, conversations, max_tokens, temp, port, args):
                     "n": 1,  # Always request one response
                     "top_p": args.top_p,
                     "continue_final_message": args.continue_final_message,
+                    "enable_thinking": False if "no_thinking" in args.prompt_style else True,
                     "add_generation_prompt": not args.continue_final_message
                 }
                 
@@ -572,9 +573,7 @@ def perform_inference_and_check(
     responses = []
 
     if args.prompt_style.startswith("no_thinking"):
-        if "Qwen3" in args.model:
-            model_config.user_template = "{} /no_think"
-        elif isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
+        if isinstance(handler, MathTaskHandler) or isinstance(handler, GPQADiamondTaskHandler):
             model_config.user_template = "{}\nPlease write the answer for this math problem directly without any thinking process."
         elif isinstance(handler, LiveCodeBenchTaskHandler) or isinstance(handler, APPSTaskHandler) or isinstance(handler, TACOTaskHandler):
             model_config.user_template = "{}\nPlease solve the above problem without the thinking process."
