@@ -92,8 +92,5 @@
 {%- endfor %}
 
 {%- if add_generation_prompt %}
-    {{- '<|im_start|>assistant\n' }}
-    {%- if enable_thinking is defined and enable_thinking is false %}
-        {{- '<think>\nOkay I think I have finished thinking.\n</think>\n\nLet\'s solve the problem.' }}
-    {%- endif %}
+    {{- '<|im_start|>assistant\n<think>\nOkay I think I have finished thinking.\n</think>\n\nLet\'s solve the problem.' }}
 {%- endif %}
