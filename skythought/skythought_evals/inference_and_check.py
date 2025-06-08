@@ -1249,10 +1249,7 @@ def main():
             --tensor-parallel-size {args.tp} --dtype {args.dtype} \
             --seed {args.seed} \
             --enable-prefix-caching --enforce-eager \
-            --reasoning-parser deepseek_r1 \
             """
-            if args.prompt_style == "thinking_r1":
-                cmd += " --enable-reasoning"
             if args.chat_template:
                 cmd += f" --chat-template {args.chat_template} --host 0.0.0.0"
             server_process, port = launch_server_cmd(cmd)
