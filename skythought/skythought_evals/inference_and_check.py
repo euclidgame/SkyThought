@@ -595,6 +595,15 @@ def perform_inference_and_check(
                         "content": "<think>\nOkay, I have finished thinking.\n</think>\nLet's solve the code problem." if args.prompt_style == "no_thinking_r1" else "<think>\nOkay, I have finished thinking.\n</think>\nThe task is to" if args.prompt_style == "no_thinking_r1_2" else "<think>\nOkay, I have finished thinking.\n</think>\nTo solve the problem, we need to determine" if args.prompt_style == "no_thinking_r1_3" else "<think>\nOkay, I have finished thinking.\n</think>\n**Final Answer:**",
                     }
                 )
+    if args.prompt_style == "thinking_r1":
+        for i, conv in enumerate(conversations):
+            conv.append(
+                {
+                    "role": "assistant",
+                    "content": "<think>",
+                }
+            )
+    
 
     for temp in temperatures:
         if len(conversations) == 0:
